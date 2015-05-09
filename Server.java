@@ -42,6 +42,8 @@ public class Server implements Exitable {
 		try {
 			if (verbose) System.out.println("Waiting for client...");
 			receiveSocket.receive(packet);
+			System.out.println("Length of packet received is: " + packet.getLength());
+			System.arraycopy(buf,0,buf,0,packet.getLength());
 			if (verbose) System.out.println("Packet received.");
 		} catch(Exception e) {
 			e.printStackTrace();

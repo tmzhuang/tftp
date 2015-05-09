@@ -42,6 +42,7 @@ public class Client implements Exitable {
 				System.out.println();
 			}
 			sendReceiveSocket.send(packet);
+			System.out.println("Length of packet being sent is: " + packet.getLength());
 		} catch(Exception e) {
 			e.printStackTrace();
 			System.exit(1);
