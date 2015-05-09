@@ -2,14 +2,19 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class Client {
+public class Client implements Exitable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
-	private static int SEND_PORT = 68;
+	private static int SEND_PORT = 4;
 	private static int BUF_SIZE = 100;
 	private static byte TFPT_PADDING = 0;
 
 	public Client() {
+		// Start repl for quitting client
+		Thread repl = new Thread(new Repl(this));
+		repl.start();
+
+		// Create data socket for communicating with server
 		try {
 			sendReceiveSocket = new DatagramSocket();
 		} catch(Exception se) {

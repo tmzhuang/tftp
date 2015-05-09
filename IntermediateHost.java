@@ -3,7 +3,7 @@ import java.net.*;
 
 public class IntermediateHost {
 	private DatagramSocket receiveSocket, sendReceiveSocket;
-	private static int RECEIVE_PORT = 68;
+	private static int RECEIVE_PORT = 4;
 	private static int SEND_PORT = 69;
 	private static int BUF_SIZE = 100;
 	private boolean verbose = true;
@@ -48,12 +48,7 @@ public class IntermediateHost {
 		// Create packet to send to server
 		try {
 			DatagramPacket sendPacket = new DatagramPacket(buf, buf.length, InetAddress.getLocalHost(), SEND_PORT);
-		} catch(Exception e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
 		// Send packet to server
-		try {
 			if (verbose) System.out.println("Sending packet to server");
 			sendReceiveSocket.send(sendPacket);
 			
@@ -79,8 +74,8 @@ public class IntermediateHost {
 		}
 
 		// Create packet to send back to back to client
-		sendPacket = new DatagramPacket(buf, buf.length, clientAddr, clientPort);
 		try {
+			DatagramPacket sendPacket = new DatagramPacket(buf, buf.length, clientAddr, clientPort);
 			DatagramSocket tmpSocket = new DatagramSocket();
 			if (verbose) {
 				System.out.println("Sending packet to client");

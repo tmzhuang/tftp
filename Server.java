@@ -2,7 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class Server {
+public class Server implements Exitable {
 	private DatagramSocket receiveSocket;
 	private static int RECEIVE_PORT = 69;
 	private static int BUF_SIZE = 100; // Default buffer size for packet data
@@ -18,6 +18,10 @@ public class Server {
 
 	// Constructor
 	public Server() {
+		// Start repl for quitting client
+		Thread repl = new Thread(new Repl(this));
+		repl.start();
+
 		try {
 			receiveSocket = new DatagramSocket(RECEIVE_PORT);
 		} catch(Exception se) {
@@ -166,6 +170,7 @@ public class Server {
 	}
 
 	public static void main (String[] args) {
+		// Listen on TFPT known port (69)
 		Server server = new Server();
 		while (true) {
 			server.listen();
