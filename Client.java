@@ -5,7 +5,8 @@ import java.util.*;
 public class Client implements Exitable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
-	private static int SEND_PORT = 4;
+	//private static int SEND_PORT = 4;
+	private static int SEND_PORT = 69;
 	private static int BUF_SIZE = 100;
 	private static byte TFPT_PADDING = 0;
 
@@ -42,7 +43,6 @@ public class Client implements Exitable {
 				System.out.println();
 			}
 			sendReceiveSocket.send(packet);
-			System.out.println("Length of packet being sent is: " + packet.getLength());
 		} catch(Exception e) {
 			e.printStackTrace();
 			System.exit(1);

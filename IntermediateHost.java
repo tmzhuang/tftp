@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.util.*;
 
 public class IntermediateHost {
 	private DatagramSocket receiveSocket, sendReceiveSocket;
@@ -36,6 +37,7 @@ public class IntermediateHost {
 				System.out.println("Packet from client received.");
 				System.out.print("Request: ");
 				System.out.println(new String(receivePacket.getData()));
+				System.out.println("Length of packet received is: " + receivePacket.getLength());
 			}
 			clientAddr = receivePacket.getAddress();
 			clientPort = receivePacket.getPort();
@@ -47,7 +49,11 @@ public class IntermediateHost {
 
 		// Create packet to send to server
 		try {
-			DatagramPacket sendPacket = new DatagramPacket(buf, buf.length, InetAddress.getLocalHost(), SEND_PORT);
+			// Truncate received packet to received length
+			byte[] data = new byte[receivePacket.getLength()];
+			System.arraycopy(buf,0,data,0,receivePacket.getLength());
+			System.out.println(Arrays.toString(data));
+			DatagramPacket sendPacket = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), SEND_PORT);
 		// Send packet to server
 			if (verbose) System.out.println("Sending packet to server");
 			sendReceiveSocket.send(sendPacket);
