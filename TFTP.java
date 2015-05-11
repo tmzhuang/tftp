@@ -101,7 +101,7 @@ public class TFTP {
 	 * @param dataPacket A TFTP DATA packet
 	 * @param filename Name of file to write to
 	 */
-	public void writeDATAToFile(DatagramPacket dataPacket, String filename) {
+	public static void writeDATAToFile(DatagramPacket dataPacket, String filename) {
 		try {
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
 			byte[] data = getData(dataPacket);
@@ -117,7 +117,7 @@ public class TFTP {
 	 *
 	 * @param packet A TFTP DatagramPacket
 	 */
-	public int getOpCode(DatagramPacket packet) {
+	public static int getOpCode(DatagramPacket packet) {
 		byte[] opCodeBytes = new byte[OP_CODE_SIZE];
 		byte[] data = packet.getData();
 		System.arraycopy(data,0,opCodeBytes,0,OP_CODE_SIZE);
@@ -129,7 +129,7 @@ public class TFTP {
 	 *
 	 * @param packet A TFTP DATA or ACK packet
 	 */
-	public int getBlockNumber(DatagramPacket packet) throws IllegalArgumentException {
+	public static int getBlockNumber(DatagramPacket packet) throws IllegalArgumentException {
 		// Check that packet is either DATA or ACK
 		int opCode = getOpCode(packet);
 		boolean isDATA = opCode == DATA_OP_CODE;
@@ -151,7 +151,7 @@ public class TFTP {
 	 *
 	 * @param packet A TFTP DATA packet
 	 */
-	public byte[] getData(DatagramPacket packet) throws IllegalArgumentException {
+	public static byte[] getData(DatagramPacket packet) throws IllegalArgumentException {
 		// Check that packet is DATA
 		int opCode = getOpCode(packet);
 		boolean isDATA = opCode == DATA_OP_CODE;
