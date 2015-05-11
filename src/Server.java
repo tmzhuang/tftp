@@ -11,10 +11,119 @@ public class Server implements Exitable {
 	private static byte TFTP_PADDING = 0; // Padding used in TFTP protocol
 	private boolean verbose = true;
 
-	// Thrown when server receives a packet of invalid format
-	public class InvalidPacketReceivedException extends RuntimeException{
-		public InvalidPacketReceivedException() {
-			super();
+	private class ClientHandler implements Runnable {
+		private InetAddress replyAddr;
+		private int TID;
+		private DatagramPacket initialPacket;
+		private DatagramSocket socket;
+
+		public ClientHandler(DatagramPacket packet) {
+			this.replyAddr = packet.getAddress();
+			this.TID = packet.getPort();
+			this.initialPacket = packet;
+			try {
+				this.socket = new DatagramSocket();
+			} catch(Exception e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+		}
+
+		public void run() {
+			Request r = TFTP.parseRQ(initialPacket);
+
+			switch (r.getType()) {
+				case READ:
+					handleRead(r);
+					break;
+				case WRITE:
+					handleWrite(r);
+					break;
+				default: break;
+
+			}
+		}
+
+		/**
+		 * Handle a read request.
+		 *
+		 * @param r Request type, filename and mode
+		 */
+		private void handleRead(Request r) {
+			String filename = r.getFilename();
+			Queue<DatagramPacket> dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filename);
+
+			// Send each packet and wait for an ACK until queue is empty
+			while (!dataPacketQueue.isEmpty()) {
+				// Send a packet
+				DatagramPacket currentPacket = dataPacketQueue.remove();
+				int currentBlockNumber = TFTP.getBlockNumber(currentPacket);
+				try {
+					if (verbose) System.out.println("Sending DATA block number " + currentBlockNumber);
+					socket.send(currentPacket);
+				} catch(Exception e) {
+				}
+
+				// Wait for ACK
+				try {
+					// ACK should be set size
+					int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE;
+					byte[] buf = new byte[bufferSize];
+					// Get a packet from client
+					DatagramPacket receivePacket = new DatagramPacket(buf,buf.length);
+					socket.receive(receivePacket);
+
+					// Throw exception if sender is invalid
+					if (receivePacket.getAddress() != replyAddr ||
+							receivePacket.getPort() != TID) 
+						throw new Exception("Packet recevied from invalid sender.");
+
+					// Throw exception if wrong OP code
+					if (TFTP.getOpCode(receivePacket) != TFTP.ACK_OP_CODE)
+						throw new Exception("Expected ACK packet but a non-ACK packet was received.");
+
+					// Throw exception if DATA and ACK block numbers don't match
+					if (TFTP.getBlockNumber(receivePacket) != currentBlockNumber)
+						throw new Exception("ACK packet received does not match block number of DATA sent.");
+
+					if (verbose) System.out.println("ACK packet received for block number " + currentBlockNumber);
+				} catch(Exception e) {
+				}
+			}
+		}
+
+		/**
+		 * Handle write requests
+		 *
+		 * @param r Request type, filename, and mode
+		 */
+		private void handleWrite(Request r) {
+			int maxPacketLen = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
+			int currentBlockNumber = 0;
+			DatagramPacket receivePacket;
+
+			do {
+				// Form a ACK packet to respond with
+				DatagramPacket sendPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
+				currentBlockNumber++;
+
+				// Wait for a DATA packet
+				byte[] buf = new byte[maxPacketLen];
+				receivePacket = new DatagramPacket(buf,buf.length);
+				socket.receive(receivePacket);
+
+				// Throw exception if wrong OP code
+				if (TFTP.getOpCode(receivePacket) != TFTP.DATA_OP_CODE)
+					throw new Exception("Expected DATA packet but a non-DATA packet was received.");
+
+				// Throw exception if unexpected block number
+				if (TFTP.getBlockNumber(receivePacket) != currentBlockNumber)
+					throw new Exception("DATA packet received has an unexpected block number.");
+
+				// Write the data packet to file
+				TFTP.writeDATAToFile(receivePacket, r.getFilename());
+
+			} while (TFTP.getData(receivePacket).length == TFTP.MAX_DATA_SIZE);
 		}
 	}
 
@@ -55,19 +164,8 @@ public class Server implements Exitable {
 			System.exit(1);
 		}
 
-		// Parse packet
-		if (verbose) System.out.println("Parsing packet...");
-		Request r = this.parse(packet);
-		if (verbose) {
-			System.out.println("Byte data: " + Arrays.toString(packet.getData()));
-			System.out.println("Request type: " + r.getType());
-			System.out.println("Filename: " + r.getFilename());
-			System.out.println("Mode: " + r.getMode());
-			System.out.println();
-		}
-
-		// Respond to packet
-		this.respond(packet.getAddress(), packet.getPort(), r);
+		// Start a handler to connect with client
+		(new Thread(new ClientHandler(packet))).start();
 	}
 
 	// Send a response packet to addr:port with Request r.
@@ -104,72 +202,6 @@ public class Server implements Exitable {
 			System.exit(1);
 		}
 
-	}
-
-	// Parse a given DatagramPacket p to see if it is valid. A valid packet must begin
-	// with [0,1] or [0,2], followed by an arbitrary number of bytes representing the 
-	// filename, followed by a 0 byte, followed by an arbitrary number of bytes representing
-	// the mode, followed by a terminating 0 byte.
-	// If the packet is valid, a request with the respective request type, filename, and mode
-	// is created. Otherwise, an exception is thrown and the server quits.
-	public Request parse(DatagramPacket p) throws InvalidPacketReceivedException {
-		Request.Type t;
-		String f, m;
-		int currentIndex = 0;
-
-		// Get number of bytes used by packet data
-		int len = p.getData().length; 
-		// Make copy of data bytes to parse
-		byte[] buf = new byte[len];
-		System.arraycopy(p.getData(),0,buf,0,len);
-
-		// If first byte isn't 0, packet is invalid
-		if (buf[0] != TFTP_PADDING) throw new InvalidPacketReceivedException();
-
-		// Check second byte for read or write
-		switch (buf[1]) {
-			case 1:
-				t = Request.Type.READ;
-				break;
-			case 2:
-				t = Request.Type.WRITE;
-				break;
-			default:
-				throw new InvalidPacketReceivedException();
-		}
-
-		// Get filename
-		currentIndex = 2;
-		if (currentIndex >= len) throw new InvalidPacketReceivedException();
-		// Create an array of bytes to hold filename byte data
-		byte[] fbytes = new byte[len];
-		// Loop through array until 0 byte is found or out of bound occurs
-		while (buf[currentIndex] != TFTP_PADDING) {
-			currentIndex++;
-			if (currentIndex >= len) throw new InvalidPacketReceivedException();
-		}
-		int filenameLength = currentIndex - 2;
-		System.arraycopy(buf,2,fbytes,0,filenameLength);
-		f = new String(fbytes);
-
-		// Check for 0 byte padding between filename and mode
-		if (buf[currentIndex] != TFTP_PADDING) throw new InvalidPacketReceivedException();
-
-		// Get mode
-		currentIndex++;
-		if (currentIndex >= len) throw new InvalidPacketReceivedException();
-		int modeStartIndex = currentIndex;
-		byte[] mbytes = new byte[len];
-		// Loop through array until 0 byte is found or out of bound occurs
-		while (buf[currentIndex] != TFTP_PADDING) {
-			currentIndex++;
-			if (currentIndex >= len) throw new InvalidPacketReceivedException();
-		}
-		int modeLength = currentIndex - modeStartIndex;
-		System.arraycopy(buf,modeStartIndex,mbytes,0,modeLength);
-		m = new String(mbytes);
-
-		return new Request(t, f, m);
 	}
 
 	public void exit() {
