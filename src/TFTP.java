@@ -287,10 +287,11 @@ public class TFTP {
 	*
 	* @return Request of the packet.
 	*/
-	public Request parseRQ(DatagramPacket p) throws IllegalArgumentException {
+	public static Request parseRQ(DatagramPacket p) throws IllegalArgumentException {
 		Request.Type t;
 		String f, m;
 		int currentIndex = 0;
+		int opCode = getOpCode(p);
 
 		// Get number of bytes used by packet data
 		int len = p.getData().length; 
@@ -298,11 +299,8 @@ public class TFTP {
 		byte[] buf = new byte[len];
 		System.arraycopy(p.getData(),0,buf,0,len);
 
-		// If first byte isn't 0, packet is invalid
-		if (buf[0] != TFTP_PADDING) throw new IllegalArgumentException();
-
 		// Check second byte for read or write
-		switch (buf[1]) {
+		switch (opCode) {
 			case 1:
 				t = Request.Type.READ;
 				break;

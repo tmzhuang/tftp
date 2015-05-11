@@ -18,9 +18,7 @@ public class Repl implements Runnable {
 
 			// Quit server if exit command given
 			if (s.equalsIgnoreCase("exit")) {
-				System.out.println("Server shutting down...");
-				prog.exit();
-				System.exit(1);
+				System.out.println("Shutting down...");
 			} else {
 				System.out.println("Invalid command. Please type \"exit\" to quit.");
 			}
