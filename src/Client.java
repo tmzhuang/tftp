@@ -62,6 +62,50 @@ public class Client implements Exitable {
 			System.exit(1);
 		}
 	}
+	
+	public void sendReadRequest(InetAddress addr, String src, String des)
+	{
+		int TID, blockSize = 0, blockCount = 1;
+		send(addr, SEND_PORT, new Request(Request.Type.READ, src, "netascii"));
+		do {
+			// Form packet to receive server packet
+			int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
+			byte[] data = new byte[bufferSize];
+			DatagramPacket packet = new DatagramPacket(data, data.length);
+			try {
+				if (verbose) System.out.println("Waiting for server...");
+				sendReceiveSocket.receive(packet);
+				// Print info about packet received
+				if (verbose) {
+					// For testing purpose
+					/*System.out.println("Packet received from ");
+					System.out.println(packet.getAddress().getHostAddress() + ":" + packet.getPort());
+					System.out.print("Packet string: ");
+					System.out.println(packet.getData().toString());
+					System.out.print("Packet bytes: ");
+					System.out.println(Arrays.toString(packet.getData()));
+					System.out.println();*/
+					// Actual Implementation
+					TID = packet.getPort();
+					// If receive DATA packet and the block number is correct, proceed writing to file
+					if(TFTP.getOpCode(packet) == TFTP.DATA_OP_CODE
+							&& TFTP.getBlockNumber(packet) == blockCount) {
+						TFTP.writeDATAToFile(packet, des);
+						DatagramPacket ack = TFTP.formACKPacket(addr, TID, blockCount);
+						sendReceiveSocket.send(ack);
+						blockSize = TFTP.getData(packet).length;
+						if(blockSize == 512)
+							blockCount++;
+					}
+					else
+						throw new Exception();
+				}
+			} catch(Exception e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+		} while(blockSize == 512);
+	}
 
 	// Waits for response from server
 	public void listen() {
