@@ -127,7 +127,7 @@ public class TFTP {
 		byte[] opCodeBytes = new byte[OP_CODE_SIZE];
 		byte[] data = packet.getData();
 		System.arraycopy(data,0,opCodeBytes,0,OP_CODE_SIZE);
-		return Byte.toUnsignedInt(opCodeBytes[1]);
+		return toUnsignedInt(opCodeBytes[1]);
 	}
 
 	/**
@@ -238,8 +238,8 @@ public class TFTP {
 	 */
 	public static int bytesToBlockNumber(byte[] bytes) throws IllegalArgumentException {
 		if (bytes.length != 2) throw new IllegalArgumentException();
-		int msb = Byte.toUnsignedInt(bytes[0]);
-		int lsb = Byte.toUnsignedInt(bytes[1]);
+		int msb = toUnsignedInt(bytes[0]);
+		int lsb = toUnsignedInt(bytes[1]);
 		return msb*256 + lsb;
 	}
 
@@ -343,5 +343,11 @@ public class TFTP {
 		m = new String(mbytes);
 
 		return new Request(t, f, m);
+	}
+
+	// School PC doesn't have byte.toUnsignedInt()
+	public static int toUnsignedInt(byte myByte)
+	{
+		return (int)(myByte & 0xFF);
 	}
 }
