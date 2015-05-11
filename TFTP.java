@@ -1,3 +1,5 @@
+package tftp;
+
 import java.net.*;
 import java.util.*;
 import java.io.*;
@@ -8,9 +10,20 @@ public class TFTP {
 	public static final int OP_CODE_SIZE = 2;
 	public static final int BLOCK_NUMBER_SIZE = 2;
 	public static final int MAX_DATA_SIZE = 512;
+	public static final int READ_OP_CODE = 1;
+	public static final int WRITE_OP_CODE = 2;
+	public static final int DATA_OP_CODE = 3;
+	public static final int ACK_OP_CODE = 4;
+	public static final int ERROR_OP_CODE = 5;
 
-	// Forms a DatagramPacket using Request r with information about request type
-	// (read, write, or test), filename, and mode (ascii, octet, etc.).
+	/**
+	 * Forms a DatagramPacket using Request r with information about request type
+	 * (read, write, or test), filename, and mode (ascii, octet, etc.).
+	 *
+	 * @param addr InetAddress of packet destination
+	 * @param port Port of packet destination
+	 * @param r Request contains request type (READ or WRITE), filename, and mode
+	 */
 	public static DatagramPacket formRQPacket(InetAddress addr, int port, Request r) {
 		int currentIndex;
 		// Create byte array for packet
@@ -53,8 +66,14 @@ public class TFTP {
 		return new DatagramPacket(data,currentIndex+1, addr, port);
 	}
 
-	// Given a filename, returns a queue of datagram packets for that
-	// file in 512 byte blocks.
+	/**
+	 * Given a filename, returns a queue of datagram packets for that
+	 * file in 512 byte blocks.
+	 *
+	 * @param addr InetAddress of packet destination
+	 * @param port Port of packet destination
+	 * @param filename Filename of file to read
+	 */
 	public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filename) {
 		Queue<DatagramPacket> packetQueue = new ArrayDeque<DatagramPacket>();
 		try {
@@ -76,31 +95,87 @@ public class TFTP {
 		return packetQueue;
 	}
 
+	/**
+	 * Writes a TFTP DATA packet to file.
+	 *
+	 * @param dataPacket A TFTP DATA packet
+	 * @param filename Name of file to write to
+	 */
 	public void writeDATAToFile(DatagramPacket dataPacket, String filename) {
-
+		try {
+			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
+			byte[] data = getData(dataPacket);
+			out.write(data);
+		} catch(Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
 	}
 
+	/**
+	 * Returns the op code of a datagram packet as an int.
+	 *
+	 * @param packet A TFTP DatagramPacket
+	 */
+	public int getOpCode(DatagramPacket packet) {
+		byte[] opCodeBytes = new byte[OP_CODE_SIZE];
+		byte[] data = packet.getData();
+		System.arraycopy(data,0,opCodeBytes,0,OP_CODE_SIZE);
+		return Byte.toUnsignedInt(opCodeBytes[1]);
+	}
+
+	/**
+	 * Given a DATA or ACK datagram packet, returns the block number as an int.
+	 *
+	 * @param packet A TFTP DATA or ACK packet
+	 */
 	public int getBlockNumber(DatagramPacket packet) throws IllegalArgumentException {
 		// Check that packet is either DATA or ACK
-		byte[] data = packet.getData();
-		boolean isDATA = (data[0]==0) && (data[1]==3);
-		boolean isACK = (data[0]==0) && (data[1]==4);
+		int opCode = getOpCode(packet);
+		boolean isDATA = opCode == DATA_OP_CODE;
+		boolean isACK = opCode == ACK_OP_CODE;
 
 		// If isn't DATA or ACK, throw an exception
 		if (!(isDATA || isACK)) throw new IllegalArgumentException();
 
 		// Get the block number as a byte array
 		byte[] blockNumberBytes = new byte[BLOCK_NUMBER_SIZE];
-		System.arraycopy(data,OP_CODE_SIZE,blockNumberBytes,0,BLOCK_NUMBER_SIZE);
+		System.arraycopy(packet.getData(),OP_CODE_SIZE,blockNumberBytes,0,BLOCK_NUMBER_SIZE);
 		
 		return bytesToBlockNumber(blockNumberBytes);
 	}
 
-	public byte[] getData(DatagramPacket packet) {
+	/**
+	 * Given a TFTP DATA packet, returns the data portion of the TFTP packet 
+	 * as a byte array.
+	 *
+	 * @param packet A TFTP DATA packet
+	 */
+	public byte[] getData(DatagramPacket packet) throws IllegalArgumentException {
+		// Check that packet is DATA
+		int opCode = getOpCode(packet);
+		boolean isDATA = opCode == DATA_OP_CODE;
+
+		// If packet isn't DATA, throw exception
+		if (!isDATA) throw new IllegalArgumentException();
+
+		int dataLen = packet.getLength() - OP_CODE_SIZE - BLOCK_NUMBER_SIZE;
+		int dataStart = OP_CODE_SIZE + BLOCK_NUMBER_SIZE - 1;
+		byte[] data = new byte[dataLen];
+		System.arraycopy(packet.getData(),dataStart,data,0,dataLen);
+
+		return data;
 	}
 
-	// Give a block number and a byte array of data, creates a datagram packet for the
-	// given ip address and port.
+	/**
+	 * Give a block number and a byte array of data, creates a datagram packet for the
+	 * given ip address and port.
+	 *
+	 * @param addr InetAddress of DATA packet destination
+	 * @param port Port od DATA packet destination
+	 * @param blockNumber The block number of the DATA packet
+	 * @param data The byte array holding the data
+	 */
 	private static DatagramPacket formDATAPacket(InetAddress addr, int port, int blockNumber, byte[] data) {
 		// 4+data.length because 2 bytes for op code and 2 bytes for blockNumber
 		byte[] buf = new byte[OP_CODE_SIZE + BLOCK_NUMBER_SIZE +data.length];
@@ -125,7 +200,11 @@ public class TFTP {
 		return new DatagramPacket(buf,buf.length,addr,port);	
 	}
 
-	// Converts an integer to a 2-byte byte array
+	/**
+	 * Converts an integer to a 2-byte byte array.
+	 *
+	 * @param blockNumber Integer to be coverted to a 2-byte byte array
+	 */
 	public static byte[] blockNumberToBytes(int blockNumber) throws IllegalArgumentException {
 		if (blockNumber<0 || blockNumber>66535) throw new IllegalArgumentException();
 
@@ -136,7 +215,11 @@ public class TFTP {
 		return blockNumberBytes;
 	}
 
-	// Converts a 2-byte byte array to an integer
+	/**
+	 * Converts a 2-byte byte array to an integer.
+	 *
+	 * @param bytes 2-byte byte array holding the block number
+	 */
 	public static int bytesToBlockNumber(byte[] bytes) throws IllegalArgumentException {
 		if (bytes.length != 2) throw new IllegalArgumentException();
 		int msb = Byte.toUnsignedInt(bytes[0]);
@@ -144,7 +227,13 @@ public class TFTP {
 		return msb*256 + lsb;
 	}
 
-	// Forms a ACK packet for the given ip address, port and blocknumber
+	/**
+	 * Forms a ACK packet for the given ip address, port and blocknumber
+	 *
+	 * @param addr InetAddress of DATA packet destination
+	 * @param port Port od DATA packet destination
+	 * @param blockNumber Block number of the ACK packet
+	 */
 	public static DatagramPacket formACKPacket(InetAddress addr, int port, int blockNumber) {
 		byte[] buf = new byte[OP_CODE_SIZE + BLOCK_NUMBER_SIZE];
 
