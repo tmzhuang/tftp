@@ -6,7 +6,7 @@ import java.io.*;
 
 public class TFTP {
 	public static final int BUF_SIZE = 100;
-	public static final int TFPT_PADDING = 0;
+	public static final int TFTP_PADDING = 0;
 	public static final int OP_CODE_SIZE = 2;
 	public static final int BLOCK_NUMBER_SIZE = 2;
 	public static final int MAX_DATA_SIZE = 512;
@@ -23,13 +23,15 @@ public class TFTP {
 	 * @param addr InetAddress of packet destination
 	 * @param port Port of packet destination
 	 * @param r Request contains request type (READ or WRITE), filename, and mode
+	 *
+	 * @return Datagram packet for specified address and port with given request
 	 */
 	public static DatagramPacket formRQPacket(InetAddress addr, int port, Request r) {
 		int currentIndex;
 		// Create byte array for packet
 		byte[] buf = new byte[BUF_SIZE];
 		// First element will always be 0
-		buf[0] = TFPT_PADDING;
+		buf[0] = TFTP_PADDING;
 		switch (r.getType()) {
 			case READ:
 				buf[1] = 1;
@@ -38,7 +40,7 @@ public class TFTP {
 				buf[1] = 2;
 				break;
 			default:
-				buf[1] = TFPT_PADDING;
+				buf[1] = TFTP_PADDING;
 				break;
 		}
 
@@ -48,7 +50,7 @@ public class TFTP {
 
 		// Add 0 byte padding
 		currentIndex = fbytes.length + OP_CODE_SIZE;
-		buf[currentIndex] = TFPT_PADDING;
+		buf[currentIndex] = TFTP_PADDING;
 		currentIndex++;
 
 		// Add mode to packet data
@@ -57,7 +59,7 @@ public class TFTP {
 
 		// Add terminating 0 byte
 		currentIndex = currentIndex + mbytes.length;
-		buf[currentIndex] = TFPT_PADDING;
+		buf[currentIndex] = TFTP_PADDING;
 
 		// Truncate trailing zeros by copyings to a new array
 		byte[] data = new byte[currentIndex + 1];
@@ -73,6 +75,8 @@ public class TFTP {
 	 * @param addr InetAddress of packet destination
 	 * @param port Port of packet destination
 	 * @param filename Filename of file to read
+	 *
+	 * @return A queue of DATA packets formed from the file specificed in 512-byte chunks
 	 */
 	public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filename) {
 		Queue<DatagramPacket> packetQueue = new ArrayDeque<DatagramPacket>();
@@ -116,6 +120,8 @@ public class TFTP {
 	 * Returns the op code of a datagram packet as an int.
 	 *
 	 * @param packet A TFTP DatagramPacket
+	 *
+	 * @return The OP code of the TFTP packet
 	 */
 	public static int getOpCode(DatagramPacket packet) {
 		byte[] opCodeBytes = new byte[OP_CODE_SIZE];
@@ -128,6 +134,8 @@ public class TFTP {
 	 * Given a DATA or ACK datagram packet, returns the block number as an int.
 	 *
 	 * @param packet A TFTP DATA or ACK packet
+	 *
+	 * @return The block number of the ACK or DATA packet
 	 */
 	public static int getBlockNumber(DatagramPacket packet) throws IllegalArgumentException {
 		// Check that packet is either DATA or ACK
@@ -150,6 +158,8 @@ public class TFTP {
 	 * as a byte array.
 	 *
 	 * @param packet A TFTP DATA packet
+	 *
+	 * @return The data portion of a DATA packet as a byte array
 	 */
 	public static byte[] getData(DatagramPacket packet) throws IllegalArgumentException {
 		// Check that packet is DATA
@@ -175,6 +185,8 @@ public class TFTP {
 	 * @param port Port od DATA packet destination
 	 * @param blockNumber The block number of the DATA packet
 	 * @param data The byte array holding the data
+	 *
+	 * @return The respective DATA packet formed with given inputs.
 	 */
 	private static DatagramPacket formDATAPacket(InetAddress addr, int port, int blockNumber, byte[] data) {
 		// 4+data.length because 2 bytes for op code and 2 bytes for blockNumber
@@ -204,6 +216,8 @@ public class TFTP {
 	 * Converts an integer to a 2-byte byte array.
 	 *
 	 * @param blockNumber Integer to be coverted to a 2-byte byte array
+	 *
+	 * @return 2-byte representation of given block number
 	 */
 	public static byte[] blockNumberToBytes(int blockNumber) throws IllegalArgumentException {
 		if (blockNumber<0 || blockNumber>66535) throw new IllegalArgumentException();
@@ -219,6 +233,8 @@ public class TFTP {
 	 * Converts a 2-byte byte array to an integer.
 	 *
 	 * @param bytes 2-byte byte array holding the block number
+	 *
+	 * @return Int representation of given byte array
 	 */
 	public static int bytesToBlockNumber(byte[] bytes) throws IllegalArgumentException {
 		if (bytes.length != 2) throw new IllegalArgumentException();
@@ -233,6 +249,8 @@ public class TFTP {
 	 * @param addr InetAddress of DATA packet destination
 	 * @param port Port od DATA packet destination
 	 * @param blockNumber Block number of the ACK packet
+	 *
+	 * @return ACK packet formed with given inputs
 	 */
 	public static DatagramPacket formACKPacket(InetAddress addr, int port, int blockNumber) {
 		byte[] buf = new byte[OP_CODE_SIZE + BLOCK_NUMBER_SIZE];
@@ -257,6 +275,75 @@ public class TFTP {
 		return null;	
 	}
 
-	public static void main (String[] args) {
+	/**
+	 * Parse a given DatagramPacket p to see if it is valid. A valid packet must begin
+	* with [0,1] or [0,2], followed by an arbitrary number of bytes representing the 
+	* filename, followed by a 0 byte, followed by an arbitrary number of bytes representing
+	* the mode, followed by a terminating 0 byte.
+	* If the packet is valid, a request with the respective request type, filename, and mode
+	* is created. Otherwise, an exception is thrown and the server quits.
+	*
+	* @param p Datagram packet to be parsed. Must either be a RRQ or WRQ packet.
+	*
+	* @return Request of the packet.
+	*/
+	public Request parseRQ(DatagramPacket p) throws IllegalArgumentException {
+		Request.Type t;
+		String f, m;
+		int currentIndex = 0;
+
+		// Get number of bytes used by packet data
+		int len = p.getData().length; 
+		// Make copy of data bytes to parse
+		byte[] buf = new byte[len];
+		System.arraycopy(p.getData(),0,buf,0,len);
+
+		// If first byte isn't 0, packet is invalid
+		if (buf[0] != TFTP_PADDING) throw new IllegalArgumentException();
+
+		// Check second byte for read or write
+		switch (buf[1]) {
+			case 1:
+				t = Request.Type.READ;
+				break;
+			case 2:
+				t = Request.Type.WRITE;
+				break;
+			default:
+				throw new IllegalArgumentException();
+		}
+
+		// Get filename
+		currentIndex = 2;
+		if (currentIndex >= len) throw new IllegalArgumentException();
+		// Create an array of bytes to hold filename byte data
+		byte[] fbytes = new byte[len];
+		// Loop through array until 0 byte is found or out of bound occurs
+		while (buf[currentIndex] != TFTP_PADDING) {
+			currentIndex++;
+			if (currentIndex >= len) throw new IllegalArgumentException();
+		}
+		int filenameLength = currentIndex - 2;
+		System.arraycopy(buf,2,fbytes,0,filenameLength);
+		f = new String(fbytes);
+
+		// Check for 0 byte padding between filename and mode
+		if (buf[currentIndex] != TFTP_PADDING) throw new IllegalArgumentException();
+
+		// Get mode
+		currentIndex++;
+		if (currentIndex >= len) throw new IllegalArgumentException();
+		int modeStartIndex = currentIndex;
+		byte[] mbytes = new byte[len];
+		// Loop through array until 0 byte is found or out of bound occurs
+		while (buf[currentIndex] != TFTP_PADDING) {
+			currentIndex++;
+			if (currentIndex >= len) throw new IllegalArgumentException();
+		}
+		int modeLength = currentIndex - modeStartIndex;
+		System.arraycopy(buf,modeStartIndex,mbytes,0,modeLength);
+		m = new String(mbytes);
+
+		return new Request(t, f, m);
 	}
 }
