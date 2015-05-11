@@ -1,3 +1,5 @@
+package tftp;
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -29,7 +31,7 @@ public class Client implements Exitable {
 	// to port SEND_PORT
 	public void send(InetAddress addr, int port, Request r) {
 		// Form packet
-		DatagramPacket packet = formPacket(addr, port, r);
+		DatagramPacket packet = TFTP.formRQPacket(addr, port, r);
 
 		// Send the packet 
 		try {
@@ -87,60 +89,6 @@ public class Client implements Exitable {
 		}
 	}
 
-	// Forms a DatagramPacket using Request r with information about request type
-	// (read, write, or test), filename, and mode (ascii, octet, etc.).
-	public DatagramPacket formPacket(InetAddress addr, int port, Request r) {
-		if (verbose) System.out.println("Forming packet...");
-
-		int currentIndex;
-		// Create byte array for packet
-		byte[] buf = new byte[BUF_SIZE];
-		// First element will always be 0
-		buf[0] = TFPT_PADDING;
-		switch (r.getType()) {
-			case READ:
-				if (verbose) System.out.println("Read request.");
-				buf[1] = 1;
-				break;
-			case WRITE:
-				if (verbose) System.out.println("Write request.");
-				buf[1] = 2;
-				break;
-			default:
-				if (verbose) System.out.println("Invalid request.");
-				buf[1] = TFPT_PADDING;
-				break;
-		}
-
-		// Add filename to packet data
-		byte[] fbytes = r.getFilename().getBytes();
-		System.arraycopy(fbytes,0,buf,2,fbytes.length);
-
-		// Add 0 byte padding
-		currentIndex = fbytes.length + 2;
-		buf[currentIndex] = TFPT_PADDING;
-		currentIndex++;
-
-		// Add mode to packet data
-		byte[] mbytes = r.getMode().getBytes();
-		System.arraycopy(mbytes,0,buf,currentIndex,mbytes.length);
-
-		// Add terminating 0 byte
-		currentIndex = currentIndex + mbytes.length;
-		buf[currentIndex] = TFPT_PADDING;
-
-		// Truncate trailing zeros by copyings to a new array
-		byte[] data = new byte[currentIndex + 1];
-		System.arraycopy(buf,0,data,0,currentIndex+1);
-
-		DatagramPacket packet = new DatagramPacket(data,currentIndex+1, addr, port);
-		//DatagramPacket packet = new DatagramPacket(buf, currentIndex + 1, addr, port);
-		//System.out.println("Formed bytes: " + Arrays.toString(packet.getData()));
-		if (verbose) System.out.println("Packet formed.");
-
-		return packet;
-	}
-	
 	// Makes a safe exit for client
 	public void exit() {
 		sendReceiveSocket.close();
