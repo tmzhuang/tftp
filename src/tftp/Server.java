@@ -209,7 +209,7 @@ public class Server implements Exitable {
 			System.out.println("Creating new listener.");
 			try {
 				receiveSocket = new DatagramSocket(RECEIVE_PORT);
-				//receiveSocket.setSoTimeout(5000);
+				receiveSocket.setSoTimeout(5000);
 			} catch(Exception se) {
 				se.printStackTrace();
 				System.exit(1);
@@ -240,6 +240,7 @@ public class Server implements Exitable {
 				} catch(Exception e) {
 					if (e instanceof InterruptedIOException) {
 						System.out.println("Socket timeout.");
+						continue;
 					} else {
 						e.printStackTrace();
 						System.exit(1);

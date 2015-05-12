@@ -20,6 +20,7 @@ public class Repl implements Runnable {
 			if (s.equalsIgnoreCase("exit")) {
 				System.out.println("Shutting down...");
 				prog.exit();
+				return;
 			} else {
 				System.out.println("Invalid command. Please type \"exit\" to quit.");
 			}
