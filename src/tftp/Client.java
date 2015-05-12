@@ -15,9 +15,9 @@ public class Client implements Exitable {
 	private int TID;
 
 	public Client() {
-		// Start repl for quitting client
-		Thread repl = new Thread(new Repl(this));
-		repl.start();
+		//// Start repl for quitting client
+		//Thread repl = new Thread(new Repl(this));
+		//repl.start();
 
 		// Create data socket for communicating with server
 		try {
@@ -158,7 +158,7 @@ public class Client implements Exitable {
 				DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
 				if (verbose) System.out.println("ACK " + currentBlockNumber + " sent.");
 				sendReceiveSocket.send(ackPacket);
-				currentBlockNumber++;
+				currentBlockNumber = (currentBlockNumber + 1) % 65535;
 
 				// Newline
 				if (verbose) System.out.println();
@@ -173,6 +173,56 @@ public class Client implements Exitable {
 		}
 	}
 
+	public void run() {
+		Scanner in = new Scanner(System.in);
+		String cmd;
+		Request.Type t = null;
+		String filename;
+		while (true) {
+			boolean validCmd = false;
+			while(!validCmd) {
+				// Get get command
+				System.out.println("Please enter a command:");
+				cmd = in.next();
+				// Quit server if exit command given
+				if (cmd.equalsIgnoreCase("exit")) {
+					validCmd = true;
+					System.out.println("Shutting down...");
+					System.exit(1);
+				} else if (cmd.equalsIgnoreCase("read")) {
+					validCmd = true;
+					t = Request.Type.READ;
+				} else if (cmd.equalsIgnoreCase("write")) {
+					validCmd = true;
+					t = Request.Type.WRITE;
+				} else {
+					validCmd = false;
+					System.out.println("Invalid command. Valid commands are read, write, and exit.");
+				}
+			}
+
+			// Get filename
+			System.out.println("Please enter a filename:");
+			filename = in.next();
+
+			// Send the request
+			try {
+				switch (t) {
+					case READ:
+						this.read(InetAddress.getLocalHost(), filename, "netascii");
+						break;
+					case WRITE:
+						this.write(InetAddress.getLocalHost(), filename, "netascii");
+						break;
+					default:
+						System.out.println("Invalid request type. Quitting...");
+						System.exit(1);
+				}
+			} catch(Exception e) {
+			}
+		}
+	}
+
 	// Makes a safe exit for client
 	public void exit() {
 		sendReceiveSocket.close();
@@ -180,10 +230,11 @@ public class Client implements Exitable {
 
 	public static void main (String[] args) {
 		Client client = new Client();
-		try {
+		client.run();
+		//try {
 			//client.read(InetAddress.getLocalHost(), "a.txt", "netascii");
-			client.write(InetAddress.getLocalHost(), "a.txt", "netascii");
-		} catch(Exception e) {
-		}
+			//client.write(InetAddress.getLocalHost(), "a.txt", "netascii");
+		//} catch(Exception e) {
+		//}
 	}
 }

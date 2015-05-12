@@ -92,7 +92,7 @@ public class TFTP {
 				byte[] buf = new byte[n];
 				System.arraycopy(data,0,buf,0,n);
 				packetQueue.add(formDATAPacket(addr, port, blockNumber, buf));
-				blockNumber++;
+				blockNumber = (blockNumber + 1) % 65535;
 				lastn = n;
 			}
 			// Close stream

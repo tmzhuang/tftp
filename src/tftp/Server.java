@@ -152,7 +152,7 @@ public class Server implements Exitable {
 					if (verbose) System.out.println("Sending ACK" + currentBlockNumber + ".");
 					ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
 					socket.send(ackPacket);
-					currentBlockNumber++;
+					currentBlockNumber = (currentBlockNumber + 1) % 65535;
 				} while (TFTP.getData(receivePacket).length == TFTP.MAX_DATA_SIZE);
 				// Write data to file
 				TFTP.writeBytesToFile("tmp/" + r.getFilename(), fileBytes);
@@ -170,6 +170,7 @@ public class Server implements Exitable {
 			System.out.println("Creating new listener.");
 			try {
 				receiveSocket = new DatagramSocket(RECEIVE_PORT);
+				//receiveSocket.setSoTimeout(5000);
 			} catch(Exception se) {
 				se.printStackTrace();
 				System.exit(1);
@@ -199,14 +200,18 @@ public class Server implements Exitable {
 					packet.setData(data);
 					if (verbose) System.out.println("Packet received.");
 				} catch(Exception e) {
-					e.printStackTrace();
-					System.exit(1);
+					if (e instanceof InterruptedIOException) {
+						System.out.println("Socket timeout.");
+					} else {
+						e.printStackTrace();
+						System.exit(1);
+					}
 				}
 
 				// Start a handler to connect with client
 				(new Thread(new ClientHandler(packet))).start();
 			}
-
+			if (verbose) System.out.println("Listener closing...");
 			receiveSocket.close();
 		}
 	}
