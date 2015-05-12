@@ -63,6 +63,52 @@ public class Client implements Exitable {
 		}
 	}
 	
+	public void sendWriteRequest(InetAddress addr, String filename)
+	{
+		int TID, blockCount = 1;
+		// Issue a Read request from client to server
+		send(addr, SEND_PORT, new Request(Request.Type.WRITE, filename, "netascii"));
+		// Form ACK packet to receive from server
+		byte[] data = new byte[4];
+		DatagramPacket packet = new DatagramPacket(data, data.length);
+		try {
+			// Receiving ACK 0
+			if (verbose) System.out.println("Waiting for server...");
+			sendReceiveSocket.receive(packet);
+			// If condition here determines if server respond with ACK 0 or not
+			// If yes, then start the file transfer from client to server
+			if(TFTP.getOpCode(packet) == TFTP.ACK_OP_CODE
+					&& TFTP.getBlockNumber(packet) == 0) {
+				TID = packet.getPort();
+				// Generate a queue of data packets waiting to be transferred
+				Queue<DatagramPacket> packetQueue = TFTP.formDATAPackets(addr, TID, filename);
+				while(!packetQueue.isEmpty()) {
+					// Extract data packet from queue and sent it to server --> DATA 1...n
+					DatagramPacket dataPacket = packetQueue.remove();
+					sendReceiveSocket.send(dataPacket);
+					// Form an acknowledgement packet for receiving respond from server
+					byte[] ack = new byte[4];
+					DatagramPacket ackPacket = new DatagramPacket(ack, ack.length);
+					// Receive server response for acknowledgement --> ACK 1...n
+					sendReceiveSocket.receive(ackPacket);
+					int blockNumber = Byte.toUnsignedInt(ackPacket.getData()[0]);	// Or use Brandon's version of Byte-Int conversion
+					if(blockNumber == blockCount)
+						blockCount++;
+					else
+						throw new Exception();
+				}
+				System.out.println("Client write request complete.");
+			}
+			// If ACK 0 never arrives when WRQ is issued, then error must have occurred
+			else
+				throw new Exception();
+		} catch(Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+	}
+
+	
 	public void sendReadRequest(InetAddress addr, String src, String des)
 	{
 		int TID, blockSize = 0, blockCount = 1;
@@ -75,42 +121,32 @@ public class Client implements Exitable {
 			try {
 				if (verbose) System.out.println("Waiting for server...");
 				sendReceiveSocket.receive(packet);
-				// Print info about packet received
-				if (verbose) {
-					// For testing purpose
-					/*System.out.println("Packet received from ");
-					System.out.println(packet.getAddress().getHostAddress() + ":" + packet.getPort());
-					System.out.print("Packet string: ");
-					System.out.println(packet.getData().toString());
-					System.out.print("Packet bytes: ");
-					System.out.println(Arrays.toString(packet.getData()));
-					System.out.println();*/
-					// Actual Implementation
-					TID = packet.getPort();
-					// If receive DATA packet and the block number is correct, proceed writing to file
-					if(TFTP.getOpCode(packet) == TFTP.DATA_OP_CODE
-							&& TFTP.getBlockNumber(packet) == blockCount) {
-						TFTP.writeDATAToFile(packet, des);
-						DatagramPacket ack = TFTP.formACKPacket(addr, TID, blockCount);
-						sendReceiveSocket.send(ack);
-						blockSize = TFTP.getData(packet).length;
-						if(blockSize == 512)
-							blockCount++;
-					}
-					else
-						throw new Exception();
+				TID = packet.getPort();
+				// If receive DATA packet and the block number is correct, proceed writing to file
+				if(TFTP.getOpCode(packet) == TFTP.DATA_OP_CODE
+						&& TFTP.getBlockNumber(packet) == blockCount) {
+					TFTP.writeDATAToFile(packet, des);
+					DatagramPacket ack = TFTP.formACKPacket(addr, TID, blockCount);
+					sendReceiveSocket.send(ack);
+					blockSize = TFTP.getData(packet).length;
+					if(blockSize == 512)
+						blockCount++;
 				}
-			} catch(Exception e) {
+				else
+					throw new Exception();
+			}
+			catch(Exception e) {
 				e.printStackTrace();
 				System.exit(1);
 			}
 		} while(blockSize == 512);
+		System.out.println("Client read request complete.");
 	}
 
 	// Waits for response from server
 	public void listen() {
 		// Form packet to receive
-		byte[] data = new byte[4];
+		byte[] data = new byte[BUF_SIZE];
 		DatagramPacket packet = new DatagramPacket(data, data.length);
 
 		// Receive packet
