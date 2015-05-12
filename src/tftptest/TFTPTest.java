@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 
 import org.junit.Test;
 
@@ -12,6 +13,7 @@ import tftp.*;
 
 public class TFTPTest {
 
+	//public static DatagramPacket formRQPacket(InetAddress addr, int port, Request r)
 	@Test
 	public void formRQPacketTest1() {
 		try {
@@ -28,25 +30,133 @@ public class TFTPTest {
 			assertTrue(data[0] == 0);
 			assertTrue(data[1] == 1);
 			
-			// [0] [1] [] [] [] [] [] [] [] [] [] [] [] [] [] []
 			byte[] fileNameBytes = new byte[9];
 			System.arraycopy(data, 2, fileNameBytes, 0, 9);
 
-			assertTrue(fileNameBytes.equals(fileName.getBytes()));
+			assertTrue(Arrays.equals(fileNameBytes, fileName.getBytes()));
 			
 			assertTrue(data[11] == 0);
 			
 			byte[] modeBytes = new byte[8];
-			System.arraycopy(data, 2, modeBytes, 0, 8);
+			System.arraycopy(data, 12, modeBytes, 0, 8);
 			
-			assertTrue(modeBytes.equals(mode.getBytes()));
+			assertTrue(Arrays.equals(modeBytes, mode.getBytes()));
+
+			assertTrue(data[20] == 0);
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
 	}
 
 	@Test
-	public void bytesToBlockNumberTest() {
+	public void formRQPacketTest2() {
+		try {
+			String fileName = "hello.txt";
+			String mode = "octet";
+			Request request = new Request(Request.Type.WRITE, fileName, mode);
+			DatagramPacket packet = TFTP.formRQPacket(
+					InetAddress.getLocalHost(),
+					69,
+					request);
+
+			byte[] data = packet.getData();
+			
+			assertTrue(data[0] == 0);
+			assertTrue(data[1] == 2);
+			
+			byte[] fileNameBytes = new byte[9];
+			System.arraycopy(data, 2, fileNameBytes, 0, 9);
+
+			assertTrue(Arrays.equals(fileNameBytes, fileName.getBytes()));
+			
+			assertTrue(data[11] == 0);
+			
+			byte[] modeBytes = new byte[5];
+			System.arraycopy(data, 12, modeBytes, 0, 5);
+			
+			assertTrue(Arrays.equals(modeBytes, mode.getBytes()));
+			
+			assertTrue(data[17] == 0);
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
+	}
+
+	//public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filename)
+
+	//public static void writeDATAToFile(DatagramPacket dataPacket, String filename)
+
+	//public static int getOpCode(DatagramPacket packet)
+	@Test
+	public void getOpCodeTest1() {
+		byte[] readOpCode = {0, 1};
+		byte[] writeOpCode = {0, 2};
+		byte[] dataOpCode = {0, 3};
+		byte[] ackOpCode = {0, 4};
+		byte[] errorOpCode = {0, 5};
+
+		DatagramPacket readPacket = new DatagramPacket(readOpCode, 2);
+		assertTrue(TFTP.getOpCode(readPacket) == 1);
+
+		DatagramPacket writePacket = new DatagramPacket(writeOpCode, 2);
+		assertTrue(TFTP.getOpCode(writePacket) == 2);
+
+		DatagramPacket dataPacket = new DatagramPacket(dataOpCode, 2);
+		assertTrue(TFTP.getOpCode(dataPacket) == 3);
+
+		DatagramPacket ackPacket = new DatagramPacket(ackOpCode, 2);
+		assertTrue(TFTP.getOpCode(ackPacket) == 4);
+
+		DatagramPacket errorPacket = new DatagramPacket(errorOpCode, 2);
+		assertTrue(TFTP.getOpCode(errorPacket) == 5);
+	}
+
+	//public static int getBlockNumber(DatagramPacket packet) throws IllegalArgumentException
+	@Test (expected = IllegalArgumentException.class)
+	public void getBlockNumberTest1() {
+		byte[] zeroBlockNumBuf = {0, 3, 0, 0};
+		byte[] maxBlockNumBuf = {0, 4, -1, -1};
+		byte[] errorBuf = {0, 5, 0, 0};
+
+		DatagramPacket zeroBlockNumPacket = new DatagramPacket(zeroBlockNumBuf, 4);
+		assertTrue(TFTP.getBlockNumber(zeroBlockNumPacket) == 0);
+
+		DatagramPacket maxBlockNumPacket = new DatagramPacket(maxBlockNumBuf, 4);
+		assertTrue(TFTP.getBlockNumber(maxBlockNumPacket) == 65535);
+
+		// Should throw IllegalArgumentException
+		DatagramPacket errorPacket = new DatagramPacket(errorBuf, 4);
+		TFTP.getBlockNumber(errorPacket);
+	}
+
+	//public static byte[] getData(DatagramPacket packet) throws IllegalArgumentException {
+	@Test (expected = IllegalArgumentException.class)
+	public void getDataTest1() {
+		byte[] dataBuf = {0, 3, 0, 0, 65, 65, 65};
+		byte[] errorBuf = {0, 5, 0, 0, 65, 65, 65};
+
+		DatagramPacket dataPacket = new DatagramPacket(dataBuf, 7);
+		byte[] dataExpected = {65, 65, 65};
+		System.out.println(Arrays.toString(dataExpected));
+		System.out.println(Arrays.toString(TFTP.getData(dataPacket)));
+		assertTrue(Arrays.equals(TFTP.getData(dataPacket), dataExpected));
+		
+		System.out.println("Made it here!");
+
+		// Should throw IllegalArgumentException
+		DatagramPacket errorPacket = new DatagramPacket(errorBuf, 7);
+		TFTP.getData(errorPacket);
+	}
+
+	//public static byte[] blockNumberToBytes(int blockNumber) throws IllegalArgumentException {
+	@Test
+	public void blockNumberToBytesTest1() {
+		
+	}
+
+	//public static int bytesToBlockNumber(byte[] bytes) throws IllegalArgumentException
+	@Test
+	public void bytesToBlockNumberTest1() {
 		try {
 			byte[] minCase = {0, 0};
 			int blockNumber = TFTP.bytesToBlockNumber(minCase);
@@ -82,4 +192,54 @@ public class TFTPTest {
 		}
 	}
 
+	//public static Request parseRQ(DatagramPacket p) throws IllegalArgumentException
+	@Test
+	public void parseRQTest() {
+		try {
+			String fileName = "hello.txt";
+			String mode = "netascii";
+			Request readRequest = new Request(Request.Type.READ, fileName, mode);
+			DatagramPacket readRequestPacket = TFTP.formRQPacket(
+					InetAddress.getLocalHost(),
+					69,
+					readRequest);
+			Request parsedReadRequest = TFTP.parseRQ(readRequestPacket);
+			System.out.println(readRequest.getFilename());
+			System.out.println(parsedReadRequest.getFilename());
+			System.out.println(readRequest.getMode());
+			System.out.println(parsedReadRequest.getMode());
+			assertTrue(parsedReadRequest.getFilename().equals(readRequest.getFilename()));
+			assertTrue(parsedReadRequest.getMode().equals(readRequest.getMode()));
+			assertTrue(parsedReadRequest.getType().equals(readRequest.getType()));
+
+			Request writeRequest = new Request(Request.Type.WRITE, fileName, mode);
+			DatagramPacket writeRequestPacket = TFTP.formRQPacket(
+					InetAddress.getLocalHost(),
+					69,
+					writeRequest);
+			Request parsedWriteRequest = TFTP.parseRQ(writeRequestPacket);
+			assertTrue(parsedWriteRequest.getFilename().equals(writeRequest.getFilename()));
+			assertTrue(parsedWriteRequest.getMode().equals(writeRequest.getMode()));
+			assertTrue(parsedWriteRequest.getType().equals(writeRequest.getType()));
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	//public static int toUnsignedInt(byte myByte)
+	@Test
+	public void toUnsignedIntTest1() {
+		byte zero = 0;
+		assertTrue(TFTP.toUnsignedInt(zero) == 0);
+
+		byte max = -1;
+		assertTrue(TFTP.toUnsignedInt(max) == 255);
+
+		byte beforeSignFlip = 127;
+		assertTrue(TFTP.toUnsignedInt(beforeSignFlip) == 127);
+
+		byte afterSignFlip = -128;
+		assertTrue(TFTP.toUnsignedInt(afterSignFlip) == 128);
+	}
 }
