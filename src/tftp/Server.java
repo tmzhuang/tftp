@@ -41,6 +41,7 @@ public class Server implements Exitable {
 
 		public void run() {
 			Request r = TFTP.parseRQ(initialPacket);
+			System.out.println(r.getType() + " request for file \"" + r.getFilename() + "\".");
 
 			switch (r.getType()) {
 				case READ:
@@ -61,7 +62,9 @@ public class Server implements Exitable {
 		 */
 		private void handleRead(Request r) {
 			String filename = r.getFilename();
+			if (verbose) System.out.println("Forming packet queue from file...");
 			Queue<DatagramPacket> dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filename);
+			if (verbose) System.out.println("Packets formed. Ready to send " + dataPacketQueue.size() + " blocks.");
 
 			// Send each packet and wait for an ACK until queue is empty
 			while (!dataPacketQueue.isEmpty()) {
@@ -69,7 +72,8 @@ public class Server implements Exitable {
 				DatagramPacket currentPacket = dataPacketQueue.remove();
 				int currentBlockNumber = TFTP.getBlockNumber(currentPacket);
 				try {
-					if (verbose) System.out.println("Sending DATA block number " + currentBlockNumber);
+					if (verbose) System.out.println("Sending DATA block number " + currentBlockNumber + ".");
+					if (verbose) System.out.println("Block size is" + TFTP.getData(currentPacket).length + ".");
 					socket.send(currentPacket);
 				} catch(Exception e) {
 				}
@@ -81,11 +85,15 @@ public class Server implements Exitable {
 					byte[] buf = new byte[bufferSize];
 					// Get a packet from client
 					DatagramPacket receivePacket = new DatagramPacket(buf,buf.length);
+					if (verbose) System.out.println("Waiting for ACK" + currentBlockNumber + "...");
 					socket.receive(receivePacket);
 
 					// Throw exception if sender is invalid
-					if (receivePacket.getAddress() != replyAddr ||
-							receivePacket.getPort() != TID) 
+					System.out.println("Expected reply address is " + replyAddr.getHostAddress() + ":" + TID + ".");
+					System.out.println("Received from " + receivePacket.getAddress() + ":" + receivePacket.getPort() + ".");
+					if (!receivePacket.getAddress().equals(replyAddr)) System.out.println("Wrong address.");
+					if (receivePacket.getPort() != TID) System.out.println("Wrong port.");
+					if (!receivePacket.getAddress().equals(replyAddr) || receivePacket.getPort() != TID) 
 						throw new Exception("Packet recevied from invalid sender.");
 
 					// Throw exception if wrong OP code
@@ -96,10 +104,12 @@ public class Server implements Exitable {
 					if (TFTP.getBlockNumber(receivePacket) != currentBlockNumber)
 						throw new Exception("ACK packet received does not match block number of DATA sent.");
 
-					if (verbose) System.out.println("ACK packet received for block number " + currentBlockNumber);
+					if (verbose) System.out.println("ACK" + currentBlockNumber + " received.");
 				} catch(Exception e) {
+					System.out.println(e.getMessage());
 				}
 			}
+			System.out.println("End of file transfer.\n");
 		}
 
 		/**
@@ -108,38 +118,41 @@ public class Server implements Exitable {
 		 * @param r Request type, filename, and mode
 		 */
 		private void handleWrite(Request r) {
-			int maxPacketLen = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
-			int currentBlockNumber = 0;
-			DatagramPacket receivePacket;
+			try {
+				int maxPacketLen = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
+				int currentBlockNumber = 0;
+				DatagramPacket receivePacket;
+				byte[] fileBytes = new byte[0];
 
-			do {
-				// Form a ACK packet to respond with
-				DatagramPacket sendPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
-				currentBlockNumber++;
+				do {
+					// Form a ACK packet to respond with
+					DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
+					socket.send(ackPacket);
+					currentBlockNumber++;
 
-				// Wait for a DATA packet
-				byte[] buf = new byte[maxPacketLen];
-				receivePacket = new DatagramPacket(buf,buf.length);
-				try {
+					// Wait for a DATA packet
+					byte[] buf = new byte[maxPacketLen];
+					receivePacket = new DatagramPacket(buf,buf.length);
 					socket.receive(receivePacket);
 
-				// Throw exception if wrong OP code
-				if (TFTP.getOpCode(receivePacket) != TFTP.DATA_OP_CODE)
-					throw new Exception("Expected DATA packet but a non-DATA packet was received.");
+					// Throw exception if wrong OP code
+					if (TFTP.getOpCode(receivePacket) != TFTP.DATA_OP_CODE)
+						throw new Exception("Expected DATA packet but a non-DATA packet was received.");
 
-				// Throw exception if unexpected block number
-				if (TFTP.getBlockNumber(receivePacket) != currentBlockNumber)
-					throw new Exception("DATA packet received has an unexpected block number.");
-				} catch(Exception e) {
-					e.printStackTrace();
-					System.exit(1);
-				}
+					// Throw exception if unexpected block number
+					if (TFTP.getBlockNumber(receivePacket) != currentBlockNumber)
+						throw new Exception("DATA packet received has an unexpected block number.");
 
+					// Write the data packet to file
+					fileBytes = TFTP.appendData(receivePacket, fileBytes);
 
-				// Write the data packet to file
-				TFTP.writeDATAToFile(receivePacket, r.getFilename());
+				} while (TFTP.getData(receivePacket).length == TFTP.MAX_DATA_SIZE);
 
-			} while (TFTP.getData(receivePacket).length == TFTP.MAX_DATA_SIZE);
+			// Write data to file
+			TFTP.writeBytesToFile(r.getFilename(), fileBytes);
+			} catch(Exception e) {
+				System.out.println(e.getMessage());
+			}
 		}
 	}
 
@@ -147,6 +160,7 @@ public class Server implements Exitable {
 		private DatagramSocket receiveSocket;
 
 		public Listener() {
+			System.out.println("Creating new listener.");
 			try {
 				receiveSocket = new DatagramSocket(RECEIVE_PORT);
 			} catch(Exception se) {
@@ -169,7 +183,7 @@ public class Server implements Exitable {
 
 				// Receive packet
 				try {
-					if (verbose) System.out.println("Waiting for client...");
+					if (verbose) System.out.println("Waiting for request from client...");
 					receiveSocket.receive(packet);
 					System.arraycopy(buf,0,buf,0,packet.getLength());
 					// Truncate data to the length received
@@ -197,5 +211,6 @@ public class Server implements Exitable {
 	public static void main (String[] args) {
 		// Listen on TFPT known port (69)
 		Server server = new Server();
+		server.run();
 	}
 }

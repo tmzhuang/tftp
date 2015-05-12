@@ -84,32 +84,59 @@ public class TFTP {
 			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filename));
 			byte[] data = new byte[MAX_DATA_SIZE];
 			int blockNumber = 1;
-			int n;
+			int n, lastn;
+			lastn = -1;
 
+			System.out.println("forming packets for queue");
 			//Read the file in 512 byte chunks and add to packet queue 
 			while ((n = in.read(data)) != -1) {
-				packetQueue.add(formDATAPacket(addr, port, blockNumber, data));
+				byte[] buf = new byte[n];
+				System.arraycopy(data,0,buf,0,n);
+				System.out.println("n: " + n);
+				packetQueue.add(formDATAPacket(addr, port, blockNumber, buf));
 				blockNumber++;
+				lastn = n;
 			}
+			// Close stream
+			in.close();
+			// If the file is a multiple of 512, add a 0-byte data packet
+			if (lastn == MAX_DATA_SIZE) packetQueue.add(formDATAPacket(addr, port, blockNumber, new byte[0]));
 		} catch(Exception e) {
 			e.printStackTrace();
 			System.exit(1);
 		}
-
 		return packetQueue;
 	}
 
 	/**
-	 * Writes a TFTP DATA packet to file.
+	 * Append a TFTP DATA packet's data to the given array byte.
 	 *
 	 * @param dataPacket A TFTP DATA packet
-	 * @param filename Name of file to write to
+	 * @param fileBytes Byte array to append to
+	 *
+	 * @return New byte array with data appended
 	 */
-	public static void writeDATAToFile(DatagramPacket dataPacket, String filename) {
+	public static byte[] appendData(DatagramPacket dataPacket, byte[] fileBytes) {
+		byte[] data = getData(dataPacket);
+		byte[] newFileBytes = new byte[fileBytes.length + data.length];
+		// Copy old file array into new array
+		System.arraycopy(fileBytes,0,newFileBytes,0,fileBytes.length);
+		// Append data to array
+		System.arraycopy(data,0,newFileBytes,fileBytes.length,data.length);
+		return newFileBytes;
+	}
+
+	/**
+	 * Write an array of bytes to a file
+	 *
+	 * @param filename Name of file to write to
+	 * @param fileBytes Array of bytes to write
+	 */
+	public static void writeBytesToFile(String filename, byte[] fileBytes) {
 		try {
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
-			byte[] data = getData(dataPacket);
-			out.write(data);
+			out.write(fileBytes);
+			out.close();
 		} catch(Exception e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -170,9 +197,10 @@ public class TFTP {
 		if (!isDATA) throw new IllegalArgumentException();
 
 		int dataLen = packet.getLength() - OP_CODE_SIZE - BLOCK_NUMBER_SIZE;
-		int dataStart = OP_CODE_SIZE + BLOCK_NUMBER_SIZE - 1;
+		int dataStart = OP_CODE_SIZE + BLOCK_NUMBER_SIZE;
 		byte[] data = new byte[dataLen];
 		System.arraycopy(packet.getData(),dataStart,data,0,dataLen);
+		System.out.println("dataLen: " + dataLen);
 
 		return data;
 	}
@@ -323,7 +351,7 @@ public class TFTP {
 		}
 		int filenameLength = currentIndex - 2;
 		System.arraycopy(buf,2,fbytes,0,filenameLength);
-		f = new String(fbytes);
+		f = new String(fbytes).trim();
 
 		// Check for 0 byte padding between filename and mode
 		if (buf[currentIndex] != TFTP_PADDING) throw new IllegalArgumentException();
@@ -340,7 +368,7 @@ public class TFTP {
 		}
 		int modeLength = currentIndex - modeStartIndex;
 		System.arraycopy(buf,modeStartIndex,mbytes,0,modeLength);
-		m = new String(mbytes);
+		m = new String(mbytes).trim();
 
 		return new Request(t, f, m);
 	}
