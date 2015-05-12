@@ -1,13 +1,12 @@
 package tftp;
 
-import java.io.*;
 import java.net.*;
 import java.util.*;
 
 public class IntermediateHost {
 	private DatagramSocket receiveSocket, sendReceiveSocket;
 	private static int RECEIVE_PORT = 4;
-	private static int SEND_PORT = 69;
+	private static int SEND_PORT = 68;
 	private static int BUF_SIZE = 100;
 	private boolean verbose = true;
 
@@ -92,6 +91,7 @@ public class IntermediateHost {
 				System.out.println();
 			}
 			tmpSocket.send(sendPacket);
+			tmpSocket.close();
 		} catch(Exception e) {
 		}
 	}

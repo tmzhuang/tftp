@@ -1,6 +1,5 @@
 package tftp;
 
-import java.io.*;
 import java.net.*;
 import java.util.*;
 
@@ -13,10 +12,8 @@ import java.util.*;
 public class Client implements Exitable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
-	//private static int SEND_PORT = 4;
-	private static int SEND_PORT = 69;
-	private static int BUF_SIZE = 100;
-	private static byte TFPT_PADDING = 0;
+	private static int SEND_PORT = 68;
+	//private static int SEND_PORT = 69;
 	private InetAddress replyAddr;
 	private int TID;
 
@@ -221,7 +218,7 @@ public class Client implements Exitable {
 				cmd = in.next();
 				// Quit server if exit command given
 				if (cmd.equalsIgnoreCase("exit")) {
-					validCmd = true;
+					in.close();
 					System.out.println("Shutting down...");
 					System.exit(1);
 				} else if (cmd.equalsIgnoreCase("read")) {
