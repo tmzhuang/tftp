@@ -4,6 +4,12 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+/**
+ * Implementation of the TFTP file transfer program on client side.
+ * 
+ * @author Team 4
+ * @version Iteration 1
+ */
 public class Client implements Exitable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
@@ -14,6 +20,9 @@ public class Client implements Exitable {
 	private InetAddress replyAddr;
 	private int TID;
 
+	/**
+	 * Constructor for Client class, initialize a new socket upon called.
+	 */
 	public Client() {
 		//// Start repl for quitting client
 		//Thread repl = new Thread(new Repl(this));
@@ -28,6 +37,16 @@ public class Client implements Exitable {
 		}
 	}
 
+	/**
+	 * This method implement the writing process on the client side during the TFTP
+	 * file transfer. A valid write process will take place given a valid IP address,
+	 * a file location, and a transfer mode.
+	 * 
+	 * @param addr IP address of the packet being sent
+	 * @param filename String representation of the file and directory that is related
+	 * to the write request
+	 * @param mode Mode of the transfer i.e Netascii, octet, etc.
+	 */
 	public void write(InetAddress addr, String filename, String mode) {
 		// Make request packet and send
 		if (verbose) System.out.println("Sending WRITE request");
@@ -111,6 +130,17 @@ public class Client implements Exitable {
 		}
 		System.out.println("End of file transfer.\n");
 	}
+	
+	/**
+	 * This method implement the reading process on the client side during the
+	 * TFTP file transfer. A valid read process will take place given a valid IP address,
+	 * a file location, and a transfer mode.
+	 * 
+	 * @param addr IP address of the packet being sent
+	 * @param filename String representation of the file and directory that is related
+	 * to the write request
+	 * @param mode Mode of the transfer i.e Netascii, octet, etc.
+	 */
 	public void read(InetAddress addr, String filename, String mode) {
 		try {
 			// Form request and send to server
@@ -173,6 +203,11 @@ public class Client implements Exitable {
 		}
 	}
 
+	/**
+	 * This method will be invoked once a client program is executed. It will prompt
+	 * the user for inputs for file transfer process and handle the request based on
+	 * the arguments given. 
+	 */
 	public void run() {
 		Scanner in = new Scanner(System.in);
 		String cmd;
@@ -223,11 +258,18 @@ public class Client implements Exitable {
 		}
 	}
 
-	// Makes a safe exit for client
+	/**
+	 * A safe exit approach from the client side.
+	 */
 	public void exit() {
 		sendReceiveSocket.close();
 	}
 
+	/**
+	 * Main method of client class.
+	 * 
+	 * @param args input arguments when execute the server
+	 */
 	public static void main (String[] args) {
 		Client client = new Client();
 		client.run();
