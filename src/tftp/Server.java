@@ -13,7 +13,6 @@ import java.util.*;
 public class Server implements Exitable {
 	private static int RECEIVE_PORT = 69;
 	private static int BUF_SIZE = 100; // Default buffer size for packet data
-	private static byte TFTP_PADDING = 0; // Padding used in TFTP protocol
 	private boolean verbose = true;
 	private boolean running = true;
 
