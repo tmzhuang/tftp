@@ -137,11 +137,7 @@ public class TFTPTest {
 
 		DatagramPacket dataPacket = new DatagramPacket(dataBuf, 7);
 		byte[] dataExpected = {65, 65, 65};
-		System.out.println(Arrays.toString(dataExpected));
-		System.out.println(Arrays.toString(TFTP.getData(dataPacket)));
 		assertTrue(Arrays.equals(TFTP.getData(dataPacket), dataExpected));
-		
-		System.out.println("Made it here!");
 
 		// Should throw IllegalArgumentException
 		DatagramPacket errorPacket = new DatagramPacket(errorBuf, 7);
@@ -151,7 +147,21 @@ public class TFTPTest {
 	//public static byte[] blockNumberToBytes(int blockNumber) throws IllegalArgumentException {
 	@Test
 	public void blockNumberToBytesTest1() {
-		
+		byte[] zeroBlock = TFTP.blockNumberToBytes(0);
+		assertTrue(zeroBlock[0] == 0);
+		assertTrue(zeroBlock[1] == 0);
+
+		byte[] maxBlock = TFTP.blockNumberToBytes(65535);
+		assertTrue(maxBlock[0] == -1);
+		assertTrue(maxBlock[1] == -1);
+
+		byte[] beforeSignFlip = TFTP.blockNumberToBytes(127);
+		assertTrue(beforeSignFlip[0] == 0);
+		assertTrue(beforeSignFlip[1] == 127);
+
+		byte[] afterSignFlip = TFTP.blockNumberToBytes(128);
+		assertTrue(afterSignFlip[0] == 0);
+		assertTrue(afterSignFlip[1] == -128);
 	}
 
 	//public static int bytesToBlockNumber(byte[] bytes) throws IllegalArgumentException
@@ -192,9 +202,43 @@ public class TFTPTest {
 		}
 	}
 
+	//public static DatagramPacket formACKPacket(InetAddress addr, int port, int blockNumber)
+	@Test
+	public void formACKPacketTest1() {
+		try {
+			int zeroBlockNum = 0;
+			DatagramPacket zeroBlockNumPacket = TFTP.formACKPacket(
+					InetAddress.getLocalHost(),
+					69,
+					zeroBlockNum);
+			
+			byte[] zeroBlockNumBytes = zeroBlockNumPacket.getData();
+			assertTrue(zeroBlockNumBytes[0] == 0);
+			assertTrue(zeroBlockNumBytes[1] == 4);
+			assertTrue(zeroBlockNumBytes[2] == 0);
+			assertTrue(zeroBlockNumBytes[3] == 0);
+
+			int maxBlockNum = 65535;
+			DatagramPacket maxBlockNumPacket = TFTP.formACKPacket(
+					InetAddress.getLocalHost(),
+					69,
+					maxBlockNum);
+			
+			byte[] maxBlockNumBytes = maxBlockNumPacket.getData();
+			assertTrue(maxBlockNumBytes[0] == 0);
+			assertTrue(maxBlockNumBytes[1] == 4);
+			assertTrue(maxBlockNumBytes[2] == -1);
+			assertTrue(maxBlockNumBytes[3] == -1);
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
+	}
+
+	//public static DatagramPacket formERRORPacket(InetAddress addr, int port, int errorCode, String errMsg) {
+
 	//public static Request parseRQ(DatagramPacket p) throws IllegalArgumentException
 	@Test
-	public void parseRQTest() {
+	public void parseRQTest1() {
 		try {
 			String fileName = "hello.txt";
 			String mode = "netascii";
@@ -204,10 +248,6 @@ public class TFTPTest {
 					69,
 					readRequest);
 			Request parsedReadRequest = TFTP.parseRQ(readRequestPacket);
-			System.out.println(readRequest.getFilename());
-			System.out.println(parsedReadRequest.getFilename());
-			System.out.println(readRequest.getMode());
-			System.out.println(parsedReadRequest.getMode());
 			assertTrue(parsedReadRequest.getFilename().equals(readRequest.getFilename()));
 			assertTrue(parsedReadRequest.getMode().equals(readRequest.getMode()));
 			assertTrue(parsedReadRequest.getType().equals(readRequest.getType()));

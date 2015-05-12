@@ -4,6 +4,14 @@ import java.net.*;
 import java.util.*;
 import java.io.*;
 
+/**
+ * Implements the necessary tools related to TFTP for the system. It includes
+ * forming different types of TFTP packets (RRQ/WRQ, DATA, ACK, and ERROR), writing to system
+ * files, and some block manipulation algorithm.
+ * 
+ * @author Team 4
+ * @version Iteration 1
+ */
 public class TFTP {
 	public static final int BUF_SIZE = 100;
 	public static final int TFTP_PADDING = 0;
@@ -21,7 +29,7 @@ public class TFTP {
 	 * (read, write, or test), filename, and mode (ascii, octet, etc.).
 	 *
 	 * @param addr InetAddress of packet destination
-	 * @param port Port of packet destination
+	 * @param port Port number of packet destination
 	 * @param r Request contains request type (READ or WRITE), filename, and mode
 	 *
 	 * @return Datagram packet for specified address and port with given request
@@ -73,7 +81,7 @@ public class TFTP {
 	 * file in 512 byte blocks.
 	 *
 	 * @param addr InetAddress of packet destination
-	 * @param port Port of packet destination
+	 * @param port Port number of packet destination
 	 * @param filename Filename of file to read
 	 *
 	 * @return A queue of DATA packets formed from the file specificed in 512-byte chunks
@@ -127,7 +135,7 @@ public class TFTP {
 	/**
 	 * Write an array of bytes to a file
 	 *
-	 * @param filename Name of file to write to
+	 * @param filename Name of file (including directory) to write to
 	 * @param fileBytes Array of bytes to write
 	 */
 	public static void writeBytesToFile(String filename, byte[] fileBytes) {
@@ -142,7 +150,7 @@ public class TFTP {
 	}
 
 	/**
-	 * Returns the op code of a datagram packet as an int.
+	 * Returns the OP code of a datagram packet as an integer.
 	 *
 	 * @param packet A TFTP DatagramPacket
 	 *
@@ -204,10 +212,10 @@ public class TFTP {
 
 	/**
 	 * Give a block number and a byte array of data, creates a datagram packet for the
-	 * given ip address and port.
+	 * given IP address and port.
 	 *
 	 * @param addr InetAddress of DATA packet destination
-	 * @param port Port od DATA packet destination
+	 * @param port Port number of DATA packet destination
 	 * @param blockNumber The block number of the DATA packet
 	 * @param data The byte array holding the data
 	 *
@@ -240,7 +248,7 @@ public class TFTP {
 	/**
 	 * Converts an integer to a 2-byte byte array.
 	 *
-	 * @param blockNumber Integer to be coverted to a 2-byte byte array
+	 * @param blockNumber Integer to be converted to a 2-byte byte array
 	 *
 	 * @return 2-byte representation of given block number
 	 */
@@ -259,7 +267,7 @@ public class TFTP {
 	 *
 	 * @param bytes 2-byte byte array holding the block number
 	 *
-	 * @return Int representation of given byte array
+	 * @return Integer representation of given byte array
 	 */
 	public static int bytesToBlockNumber(byte[] bytes) throws IllegalArgumentException {
 		if (bytes.length != 2) throw new IllegalArgumentException();
@@ -269,10 +277,10 @@ public class TFTP {
 	}
 
 	/**
-	 * Forms a ACK packet for the given ip address, port and blocknumber
+	 * Forms a ACK packet for the given IP address, port and block number
 	 *
-	 * @param addr InetAddress of DATA packet destination
-	 * @param port Port od DATA packet destination
+	 * @param addr InetAddress of ACK packet destination
+	 * @param port Port number of ACK packet destination
 	 * @param blockNumber Block number of the ACK packet
 	 *
 	 * @return ACK packet formed with given inputs
@@ -296,12 +304,23 @@ public class TFTP {
 		return new DatagramPacket(buf,buf.length,addr,port);
 	}
 
+	/**
+	 * Forms a ERROR packet given the IP address, port, and details of the error.
+	 * 
+	 * @param addr IP address of destination of the packet to be sent
+	 * @param port Port number of destination of the packet to be sent
+	 * @param errorCode Code representation of the error
+	 * @param errMsg Detailed message of the error
+	 * 
+	 * @return ERROR packet formed with given inputs
+	 */
 	public static DatagramPacket formERRORPacket(InetAddress addr, int port, int errorCode, String errMsg) {
+		// Not yet implemented in iteration #1
 		return null;	
 	}
 
 	/**
-	 * Parse a given DatagramPacket p to see if it is valid. A valid packet must begin
+	* Parse a given DatagramPacket p to see if it is valid. A valid packet must begin
 	* with [0,1] or [0,2], followed by an arbitrary number of bytes representing the 
 	* filename, followed by a 0 byte, followed by an arbitrary number of bytes representing
 	* the mode, followed by a terminating 0 byte.
@@ -370,7 +389,14 @@ public class TFTP {
 		return new Request(t, f, m);
 	}
 
-	// School PC doesn't have byte.toUnsignedInt()
+	/**
+	 * Overwrites the method toUnsignedInt in Class Byte since toUnsignedInt is
+	 * only supported in JavaSE v1.8.
+	 * 
+	 * @param myByte Byte representation of the number.
+	 * 
+	 * @return Integer representation of the number given.
+	 */
 	public static int toUnsignedInt(byte myByte)
 	{
 		return (int)(myByte & 0xFF);
