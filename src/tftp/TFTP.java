@@ -87,12 +87,10 @@ public class TFTP {
 			int n, lastn;
 			lastn = -1;
 
-			System.out.println("forming packets for queue");
 			//Read the file in 512 byte chunks and add to packet queue 
 			while ((n = in.read(data)) != -1) {
 				byte[] buf = new byte[n];
 				System.arraycopy(data,0,buf,0,n);
-				System.out.println("n: " + n);
 				packetQueue.add(formDATAPacket(addr, port, blockNumber, buf));
 				blockNumber++;
 				lastn = n;
@@ -200,7 +198,6 @@ public class TFTP {
 		int dataStart = OP_CODE_SIZE + BLOCK_NUMBER_SIZE;
 		byte[] data = new byte[dataLen];
 		System.arraycopy(packet.getData(),dataStart,data,0,dataLen);
-		System.out.println("dataLen: " + dataLen);
 
 		return data;
 	}

@@ -120,18 +120,20 @@ public class Server implements Exitable {
 		private void handleWrite(Request r) {
 			try {
 				int maxPacketLen = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
-				int currentBlockNumber = 0;
+				int currentBlockNumber = 1;
 				DatagramPacket receivePacket;
 				byte[] fileBytes = new byte[0];
 
-				do {
-					// Form a ACK packet to respond with
-					DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
-					socket.send(ackPacket);
-					currentBlockNumber++;
+				// Form and send ACK0
+				if (verbose) System.out.println("Sending ACK0.");
+				DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, 0);
+				socket.send(ackPacket);
 
+				do {
 					// Wait for a DATA packet
+					if (verbose) System.out.println("Waiting for DATA" + currentBlockNumber + "...");
 					byte[] buf = new byte[maxPacketLen];
+					if (verbose) System.out.println("DATA" + currentBlockNumber + "received.");
 					receivePacket = new DatagramPacket(buf,buf.length);
 					socket.receive(receivePacket);
 
@@ -146,10 +148,15 @@ public class Server implements Exitable {
 					// Write the data packet to file
 					fileBytes = TFTP.appendData(receivePacket, fileBytes);
 
+					// Form a ACK packet to respond with
+					if (verbose) System.out.println("Sending ACK" + currentBlockNumber + ".");
+					ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
+					socket.send(ackPacket);
+					currentBlockNumber++;
 				} while (TFTP.getData(receivePacket).length == TFTP.MAX_DATA_SIZE);
-
-			// Write data to file
-			TFTP.writeBytesToFile(r.getFilename(), fileBytes);
+				// Write data to file
+				TFTP.writeBytesToFile("tmp/" + r.getFilename(), fileBytes);
+				if (verbose) System.out.println("Write complete.");
 			} catch(Exception e) {
 				System.out.println(e.getMessage());
 			}

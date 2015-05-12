@@ -28,53 +28,89 @@ public class Client implements Exitable {
 		}
 	}
 
-	//public void sendWriteRequest(InetAddress addr, String filename)
-	//{
-	//int TID, blockCount = 1;
-	//// Issue a Read request from client to server
-	//send(addr, SEND_PORT, new Request(Request.Type.WRITE, filename, "netascii"));
-	//// Form ACK packet to receive from server
-	//byte[] data = new byte[4];
-	//DatagramPacket packet = new DatagramPacket(data, data.length);
-	//try {
-	//// Receiving ACK 0
-	//if (verbose) System.out.println("Waiting for server...");
-	//sendReceiveSocket.receive(packet);
-	//// If condition here determines if server respond with ACK 0 or not
-	//// If yes, then start the file transfer from client to server
-	//if(TFTP.getOpCode(packet) == TFTP.ACK_OP_CODE
-	//&& TFTP.getBlockNumber(packet) == 0) {
-	//TID = packet.getPort();
-	//// Generate a queue of data packets waiting to be transferred
-	//System.out.println("forming data queue");
-	//Queue<DatagramPacket> packetQueue = TFTP.formDATAPackets(addr, TID, filename);
-	//while(!packetQueue.isEmpty()) {
-	//// Extract data packet from queue and sent it to server --> DATA 1...n
-	//DatagramPacket dataPacket = packetQueue.remove();
-	//sendReceiveSocket.send(dataPacket);
-	//// Form an acknowledgement packet for receiving respond from server
-	//byte[] ack = new byte[4];
-	//DatagramPacket ackPacket = new DatagramPacket(ack, ack.length);
-	//// Receive server response for acknowledgement --> ACK 1...n
-	//sendReceiveSocket.receive(ackPacket);
-	//int blockNumber = Byte.toUnsignedInt(ackPacket.getData()[0]);	// Or use Brandon's version of Byte-Int conversion
-	//if(blockNumber == blockCount)
-	//blockCount++;
-	//else
-	//throw new Exception();
-	//}
-	//System.out.println("Client write request complete.");
-	//}
-	//// If ACK 0 never arrives when WRQ is issued, then error must have occurred
-	//else
-	//throw new Exception();
-	//} catch(Exception e) {
-	//e.printStackTrace();
-	//System.exit(1);
-	//}
-	//}
+	public void write(InetAddress addr, String filename, String mode) {
+		// Make request packet and send
+		if (verbose) System.out.println("Sending WRITE request");
+		Request r = new Request(Request.Type.WRITE, filename, mode);
+		DatagramPacket requestPacket = TFTP.formRQPacket(addr, SEND_PORT, r);
+		try {
+			sendReceiveSocket.send(requestPacket);
+		} catch(Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
 
+		// Wait for ACK0
+		try {
+			// ACK should be set size
+			int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE;
+			byte[] buf = new byte[bufferSize];
+			// Get a packet from server
+			DatagramPacket receivePacket = new DatagramPacket(buf,buf.length);
+			if (verbose) System.out.println("Waiting for ACK0...");
+			sendReceiveSocket.receive(receivePacket);
 
+			// Throw exception if wrong OP code
+			if (TFTP.getOpCode(receivePacket) != TFTP.ACK_OP_CODE)
+				throw new Exception("Expected ACK packet but a non-ACK packet was received.");
+
+			// Throw exception if DATA and ACK block numbers don't match
+			if (TFTP.getBlockNumber(receivePacket) != 0)
+				throw new Exception("ACK packet received does not match block number of DATA sent.");
+
+			if (verbose) System.out.println("ACK0 received.");
+			this.replyAddr = receivePacket.getAddress();
+			this.TID = receivePacket.getPort();
+		} catch(Exception e) {
+			System.out.println(e.getMessage());
+		}
+
+		// Covert file into queue of datagram packets
+		if (verbose) System.out.println("Forming packet queue from file...");
+		Queue<DatagramPacket> dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filename);
+		if (verbose) System.out.println("Packets formed. Ready to send " + dataPacketQueue.size() + " blocks.");
+
+		// Send each packet and wait for an ACK until queue is empty
+		while (!dataPacketQueue.isEmpty()) {
+			// Send a packet
+			DatagramPacket currentPacket = dataPacketQueue.remove();
+			int currentBlockNumber = TFTP.getBlockNumber(currentPacket);
+			try {
+				if (verbose) System.out.println("Sending DATA" + currentBlockNumber + ".");
+				//if (verbose) System.out.println("Block size is" + TFTP.getData(currentPacket).length + ".");
+				sendReceiveSocket.send(currentPacket);
+			} catch(Exception e) {
+			}
+
+			// Wait for ACK
+			try {
+				// ACK should be set size
+				int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE;
+				byte[] buf = new byte[bufferSize];
+				// Get a packet from server
+				DatagramPacket receivePacket = new DatagramPacket(buf,buf.length);
+				if (verbose) System.out.println("Waiting for ACK" + currentBlockNumber + "...");
+				sendReceiveSocket.receive(receivePacket);
+
+				// Throw exception if sender is invalid
+				if (!receivePacket.getAddress().equals(replyAddr) || receivePacket.getPort() != TID) 
+					throw new Exception("Packet recevied from invalid sender.");
+
+				// Throw exception if wrong OP code
+				if (TFTP.getOpCode(receivePacket) != TFTP.ACK_OP_CODE)
+					throw new Exception("Expected ACK packet but a non-ACK packet was received.");
+
+				// Throw exception if DATA and ACK block numbers don't match
+				if (TFTP.getBlockNumber(receivePacket) != currentBlockNumber)
+					throw new Exception("ACK packet received does not match block number of DATA sent.");
+
+				if (verbose) System.out.println("ACK" + currentBlockNumber + " received.");
+			} catch(Exception e) {
+				System.out.println(e.getMessage());
+			}
+		}
+		System.out.println("End of file transfer.\n");
+	}
 	public void read(InetAddress addr, String filename, String mode) {
 		try {
 			// Form request and send to server
@@ -125,7 +161,7 @@ public class Client implements Exitable {
 				currentBlockNumber++;
 
 				// Newline
-				System.out.println();
+				if (verbose) System.out.println();
 			} while (TFTP.getData(dataPacket).length == TFTP.MAX_DATA_SIZE);
 			if (verbose) System.out.println("Writing bytes to file...");
 			TFTP.writeBytesToFile("tmp/" + filename, fileBytes);
@@ -144,9 +180,10 @@ public class Client implements Exitable {
 
 	public static void main (String[] args) {
 		Client client = new Client();
-		//try {
+		try {
 			//client.read(InetAddress.getLocalHost(), "a.txt", "netascii");
-		//} catch(Exception e) {
-		//}
+			client.write(InetAddress.getLocalHost(), "a.txt", "netascii");
+		} catch(Exception e) {
+		}
 	}
 }
