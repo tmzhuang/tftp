@@ -1,1 +1,1 @@
-javadoc -d html/ src/*.java
+javadoc -d html/ src/tftp/*.java
