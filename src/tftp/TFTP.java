@@ -1,4 +1,4 @@
-package tftp;
+
 
 import java.net.*;
 import java.util.*;
@@ -23,6 +23,10 @@ public class TFTP {
 	public static final int DATA_OP_CODE = 3;
 	public static final int ACK_OP_CODE = 4;
 	public static final int ERROR_OP_CODE = 5;
+	public static final int ERROR_CODE_SIZE = 2;
+	public static final int ERROR_CODE_FILE_NOT_FOUND = 1;
+	public static final int ERROR_CODE_ACCESS_VIOLATION = 2;
+	public static final int ERROR_CODE_DISK_FULL = 3;
 
 	/**
 	 * Forms a DatagramPacket using Request r with information about request type
@@ -210,16 +214,30 @@ public class TFTP {
 		return data;
 	}
 	
-	public static String getErrorMessage(DatagramPacket packet)
-	{
+	public static String getErrorMessage(DatagramPacket packet) throws IllegalArgumentException {
 		
-		return "";
+		//If packet isn't an error, throw exception
+		if(getOpCode(packet) != ERROR_OP_CODE) throw new IllegalArgumentException();
+		
+		int msgLen = packet.getLength() - OP_CODE_SIZE - BLOCK_NUMBER_SIZE - 1;
+		byte[] errorMsgBytes =  new byte [msgLen];
+		System.arraycopy(packet.getData(),OP_CODE_SIZE+ERROR_CODE_SIZE,errorMsgBytes,0,msgLen);
+		
+		String errorMsg = new String(errorMsgBytes);
+		
+		return errorMsg;
 	}
 	
-	public static int getErrorCode(DatagramPacket packet)
-	{
-		assert(getOpCode(packet) == ERROR_OP_CODE);
-		return 0;
+	public static int getErrorCode(DatagramPacket packet) throws IllegalArgumentException {
+		
+		//If packet isn't an error, throw exception
+		if(getOpCode(packet) != ERROR_OP_CODE) throw new IllegalArgumentException();
+		 
+		
+		byte[] errorCodeBytes = new byte[ERROR_CODE_SIZE];
+		System.arraycopy(packet.getData(),OP_CODE_SIZE,errorCodeBytes,0,ERROR_CODE_SIZE);
+		
+		return bytesToBlockNumber(errorCodeBytes);
 	}
 			
 
@@ -329,8 +347,28 @@ public class TFTP {
 	 * @return ERROR packet formed with given inputs
 	 */
 	public static DatagramPacket formERRORPacket(InetAddress addr, int port, int errorCode, String errMsg) {
-		// Not yet implemented in iteration #1
-		return null;	
+		byte[] buf = new byte[100];
+
+		// Op code
+		buf[0] = 0;
+		buf[1] = 5;
+
+		// Block number
+		try {
+			byte[] blockNumberBytes = blockNumberToBytes(errorCode);
+			System.arraycopy(blockNumberBytes,0,buf,OP_CODE_SIZE,BLOCK_NUMBER_SIZE);
+		} catch(Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+
+		// Message
+		byte[] sbytes = errMsg.getBytes();
+		int startIndex = OP_CODE_SIZE + BLOCK_NUMBER_SIZE;
+		System.arraycopy(sbytes,0,buf,startIndex, sbytes.length);
+		buf[OP_CODE_SIZE + BLOCK_NUMBER_SIZE + sbytes.length] = 0;
+
+		return new DatagramPacket(buf,OP_CODE_SIZE + BLOCK_NUMBER_SIZE + sbytes.length+1,addr,port);	
 	}
 
 	/**
@@ -424,7 +462,7 @@ public class TFTP {
 	}
 
 	public static boolean checkFreeSpace(String filePath) {
-		
+		return false;
 	}
 
 }
