@@ -214,7 +214,7 @@ public class Client implements Exitable {
 			boolean validCmd = false;
 			while(!validCmd) {
 				// Get get command
-				System.out.println("Please enter a command:");
+				System.out.println("Please enter a command (read, write, or exit):");
 				cmd = in.next();
 				// Quit server if exit command given
 				if (cmd.equalsIgnoreCase("exit")) {
