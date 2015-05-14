@@ -209,6 +209,19 @@ public class TFTP {
 
 		return data;
 	}
+	
+	public static String getErrorMessage(DatagramPacket packet)
+	{
+		
+		return "";
+	}
+	
+	public static int getErrorCode(DatagramPacket packet)
+	{
+		assert(getOpCode(packet) == ERROR_OP_CODE);
+		return 0;
+	}
+			
 
 	/**
 	 * Give a block number and a byte array of data, creates a datagram packet for the
@@ -244,6 +257,7 @@ public class TFTP {
 
 		return new DatagramPacket(buf,buf.length,addr,port);	
 	}
+
 
 	/**
 	 * Converts an integer to a 2-byte byte array.
@@ -397,8 +411,20 @@ public class TFTP {
 	 * 
 	 * @return Integer representation of the number given.
 	 */
-	public static int toUnsignedInt(byte myByte)
-	{
+	public static int toUnsignedInt(byte myByte) {
 		return (int)(myByte & 0xFF);
 	}
+
+	public static boolean isValidFile(String fileName, Request r) {
+		/*switch (r.getType()) {
+		case READ:
+			boolean isReadable 
+		}*/
+		return false;
+	}
+
+	public static boolean checkFreeSpace(String filePath) {
+		
+	}
+
 }
