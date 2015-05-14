@@ -261,6 +261,15 @@ public class Client implements Exitable {
 	public void exit() {
 		sendReceiveSocket.close();
 	}
+	
+	public boolean isValidFile(String fileName, Request r)
+	{
+		/*switch (r.getType()) {
+		case READ:
+			boolean isReadable 
+		}*/
+		return false;
+	}
 
 	/**
 	 * Main method of client class.
