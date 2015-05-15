@@ -415,16 +415,25 @@ public class TFTP {
 		return (int)(myByte & 0xFF);
 	}
 
-	public static boolean isValidFile(String fileName, Request r) {
+	public static boolean isReadable(String fileName) {
 		/*switch (r.getType()) {
 		case READ:
 			boolean isReadable 
 		}*/
 		return false;
 	}
-
-	public static boolean checkFreeSpace(String filePath) {
-		
+	public static boolean isWritable(String fileName) {
+		/*switch (r.getType()) {
+		case READ:
+			boolean isReadable 
+		}*/
+		return false;
 	}
+	
+	public static boolean isFileExists(String fileName) {
+		
+		return false;
+	}
+
 
 }

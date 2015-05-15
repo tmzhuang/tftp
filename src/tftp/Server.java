@@ -89,6 +89,15 @@ public class Server implements Exitable {
 		 */
 		private void handleRead(Request r) {
 			String filename = r.getFilename();
+			if (!TFTP.isFileExists(filename)) {
+				System.err.println("File does not exist");
+				// TODO (Brandon): Implement
+				DatagramPacket errorPacket = TFTP.formERRORPacket(
+						replyAddr,
+						TID,
+						1,
+						filename + " does not exist on server");
+			}
 			if (verbose) System.out.println("Forming packet queue from file...");
 			Queue<DatagramPacket> dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filename);
 			if (verbose) System.out.println("Packets formed. Ready to send " + dataPacketQueue.size() + " blocks.");

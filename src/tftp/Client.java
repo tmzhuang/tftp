@@ -214,7 +214,7 @@ public class Client implements Exitable {
 			boolean validCmd = false;
 			while(!validCmd) {
 				// Get get command
-				System.out.println("Please enter a command (read, write, or exit):");
+				System.out.println("Please enter a command:");
 				cmd = in.next();
 				// Quit server if exit command given
 				if (cmd.equalsIgnoreCase("exit")) {
@@ -236,6 +236,19 @@ public class Client implements Exitable {
 			// Get filename
 			System.out.println("Please enter a filename:");
 			filename = in.next();
+			
+			// Check if the file exists and file readable on client if WRITE request, otherwise continue loop
+			if (t == Request.Type.WRITE) {
+				if (TFTP.isFileExists(filename)) {
+					System.err.println("File does not exist");
+					continue;
+				}
+				
+				if (TFTP.isReadable(filename)) {
+					System.err.println("File is not readable");
+					continue;
+				}
+			}
 
 			// Send the request
 			try {
@@ -262,15 +275,6 @@ public class Client implements Exitable {
 		sendReceiveSocket.close();
 	}
 	
-	public boolean isValidFile(String fileName, Request r)
-	{
-		/*switch (r.getType()) {
-		case READ:
-			boolean isReadable 
-		}*/
-		return false;
-	}
-
 	/**
 	 * Main method of client class.
 	 * 
