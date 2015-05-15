@@ -283,9 +283,6 @@ public class TFTPTest {
 		assertTrue(TFTP.toUnsignedInt(afterSignFlip) == 128);
 	}
 
-	//public static boolean checkFreeSpace();
-
-	//public static boolean isValidFile(String fileName, Request r)
 
 	//public static DatagramPacket formERRORPacket(InetAddress addr, int port, int errorCode, String errMsg) {
 
