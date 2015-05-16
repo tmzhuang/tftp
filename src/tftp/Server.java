@@ -11,10 +11,12 @@ import java.util.*;
  * @version Iteration 1
  */
 public class Server implements Exitable {
-	private static int RECEIVE_PORT = 69;
+	//private static int RECEIVE_PORT = 69;
+	private static int RECEIVE_PORT = 32002;
 	private static int BUF_SIZE = 100; // Default buffer size for packet data
 	private boolean verbose = true;
 	private boolean running = true;
+	private String directory;
 
 	/**
 	 * Constructor of the Server class
@@ -26,7 +28,21 @@ public class Server implements Exitable {
 	 * An exit method for client, start repl for quitting client
 	 */
 	public void run() {
-		(new Thread(new Repl(this))).start();
+		Scanner in = new Scanner(System.in);
+
+		// Sets the directory for the server
+		do {
+			System.out.println("Please enter the directory that you want to use for the server files:");
+			System.out.println("Must end with either a '/' or a '\\' to work");
+			directory = in.next();
+			if (!TFTP.isDirectory(directory)) {
+				System.out.println("Directory does not exist.");
+			}
+		} while (!TFTP.isDirectory(directory));
+		System.out.println("The directory you entered is: " + directory);
+
+		// TODO (Brandon): Look for fix to closing Scanner closes System.in
+		(new Thread(new Repl(this, in))).start();
 		(new Thread(new Listener())).start();
 	}
 
@@ -68,7 +84,7 @@ public class Server implements Exitable {
 		 */
 		public void run() {
 			Request r = TFTP.parseRQ(initialPacket);
-			System.out.println(r.getType() + " request for file \"" + r.getFilename() + "\".");
+			System.out.println(r.getType() + " request for file \"" + directory + r.getFileName() + "\".");
 
 			switch (r.getType()) {
 				case READ:
@@ -85,21 +101,37 @@ public class Server implements Exitable {
 		/**
 		 * Handles a read request.
 		 *
-		 * @param r Request type, filename and mode
+		 * @param r Request type, filePath and mode
 		 */
 		private void handleRead(Request r) {
-			String filename = r.getFilename();
-			if (!TFTP.isFileExists(filename)) {
-				System.err.println("File does not exist");
-				// TODO (Brandon): Implement
+			String fileName = r.getFileName();
+			String filePath = directory + fileName;
+			
+			// Send an error packet if file does not exist or is a directory
+			if (!TFTP.isFileExist(filePath) || TFTP.isDirectory(filePath)) {
+				// Creates a "file not found" error packet
 				DatagramPacket errorPacket = TFTP.formERRORPacket(
 						replyAddr,
 						TID,
-						1,
-						filename + " does not exist on server");
+						TFTP.ERROR_CODE_FILE_NOT_FOUND,
+						fileName + " does not exist on server.");
+
+				// Sends error packet
+				try {
+					socket.send(errorPacket);
+				} catch (Exception e) {
+				}
+
+				// Echo error message
+				if (verbose) System.err.println("File does not exist. Aborting transfer...\n");
+
+				// Closes socket and aborts thread
+				socket.close();
+				return;
 			}
+			
 			if (verbose) System.out.println("Forming packet queue from file...");
-			Queue<DatagramPacket> dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filename);
+			Queue<DatagramPacket> dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filePath);
 			if (verbose) System.out.println("Packets formed. Ready to send " + dataPacketQueue.size() + " blocks.");
 
 			// Send each packet and wait for an ACK until queue is empty
@@ -188,10 +220,10 @@ public class Server implements Exitable {
 					if (verbose) System.out.println("Sending ACK" + currentBlockNumber + ".");
 					ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
 					socket.send(ackPacket);
-					currentBlockNumber = (currentBlockNumber + 1) % 65535;
+					currentBlockNumber = (currentBlockNumber + 1) % 65536;
 				} while (TFTP.getData(receivePacket).length == TFTP.MAX_DATA_SIZE);
 				// Write data to file
-				TFTP.writeBytesToFile("tmp/" + r.getFilename(), fileBytes);
+				TFTP.writeBytesToFile(directory + r.getFileName(), fileBytes);
 				if (verbose) System.out.println("Write complete.");
 			} catch(Exception e) {
 				System.out.println(e.getMessage());
@@ -230,6 +262,7 @@ public class Server implements Exitable {
 		* an exception is thrown and the server quits.
 		*/
 		public void run() {
+
 			while (running) {
 				// Form packet for reception
 				byte[] buf = new byte[BUF_SIZE];
@@ -237,7 +270,7 @@ public class Server implements Exitable {
 
 				// Receive packet
 				try {
-					if (verbose) System.out.println("Waiting for request from client...");
+					//if (verbose) System.out.println("Waiting for request from client...");
 					receiveSocket.receive(packet);
 					System.arraycopy(buf,0,buf,0,packet.getLength());
 					// Truncate data to the length received
@@ -247,7 +280,7 @@ public class Server implements Exitable {
 					if (verbose) System.out.println("Packet received.");
 				} catch(Exception e) {
 					if (e instanceof InterruptedIOException) {
-						System.out.println("Socket timeout.");
+						//System.out.println("Socket timeout.");
 						continue;
 					} else {
 						e.printStackTrace();

@@ -4,13 +4,15 @@ import java.util.*;
 
 public class Repl implements Runnable {
 	private Exitable prog;
+	private Scanner in;
 
-	public Repl(Exitable prog) {
+	public Repl(Exitable prog, Scanner in) {
 		this.prog = prog;
+		this.in = in;
 	}
 
 	public void run() {
-		Scanner in = new Scanner(System.in);
+		//Scanner in = new Scanner(System.in);
 		String s;
 		while (true) {
 			// Get input

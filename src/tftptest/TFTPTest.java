@@ -248,7 +248,7 @@ public class TFTPTest {
 					69,
 					readRequest);
 			Request parsedReadRequest = TFTP.parseRQ(readRequestPacket);
-			assertTrue(parsedReadRequest.getFilename().equals(readRequest.getFilename()));
+			assertTrue(parsedReadRequest.getFilePath().equals(readRequest.getFilePath()));
 			assertTrue(parsedReadRequest.getMode().equals(readRequest.getMode()));
 			assertTrue(parsedReadRequest.getType().equals(readRequest.getType()));
 
@@ -258,7 +258,7 @@ public class TFTPTest {
 					69,
 					writeRequest);
 			Request parsedWriteRequest = TFTP.parseRQ(writeRequestPacket);
-			assertTrue(parsedWriteRequest.getFilename().equals(writeRequest.getFilename()));
+			assertTrue(parsedWriteRequest.getFilePath().equals(writeRequest.getFilePath()));
 			assertTrue(parsedWriteRequest.getMode().equals(writeRequest.getMode()));
 			assertTrue(parsedWriteRequest.getType().equals(writeRequest.getType()));
 		} catch (UnknownHostException e) {

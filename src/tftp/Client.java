@@ -12,10 +12,13 @@ import java.util.*;
 public class Client implements Exitable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
-	private static int SEND_PORT = 68;
+	//private static int SEND_PORT = 68;
 	//private static int SEND_PORT = 69;
+	//private static int SEND_PORT = 32001;
+	private static int SEND_PORT = 32002;
 	private InetAddress replyAddr;
 	private int TID;
+	private String directory;
 
 	/**
 	 * Constructor for Client class, initialize a new socket upon called.
@@ -40,14 +43,14 @@ public class Client implements Exitable {
 	 * a file location, and a transfer mode.
 	 * 
 	 * @param addr IP address of the packet being sent
-	 * @param filename String representation of the file and directory that is related
+	 * @param filePath String representation of the file and directory that is related
 	 * to the write request
 	 * @param mode Mode of the transfer i.e Netascii, octet, etc.
 	 */
-	public void write(InetAddress addr, String filename, String mode) {
+	public void write(InetAddress addr, String filePath, String mode) {
 		// Make request packet and send
 		if (verbose) System.out.println("Sending WRITE request");
-		Request r = new Request(Request.Type.WRITE, filename, mode);
+		Request r = new Request(Request.Type.WRITE, filePath, mode);
 		DatagramPacket requestPacket = TFTP.formRQPacket(addr, SEND_PORT, r);
 		try {
 			sendReceiveSocket.send(requestPacket);
@@ -83,8 +86,8 @@ public class Client implements Exitable {
 
 		// Covert file into queue of datagram packets
 		if (verbose) System.out.println("Forming packet queue from file...");
-		Queue<DatagramPacket> dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filename);
-		if (verbose) System.out.println("Packets formed. Ready to send " + dataPacketQueue.size() + " blocks.");
+		Queue<DatagramPacket> dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filePath);
+		if (verbose)System.out.println("Packets formed. Ready to send " + dataPacketQueue.size() + " blocks.");
 
 		// Send each packet and wait for an ACK until queue is empty
 		while (!dataPacketQueue.isEmpty()) {
@@ -134,15 +137,15 @@ public class Client implements Exitable {
 	 * a file location, and a transfer mode.
 	 * 
 	 * @param addr IP address of the packet being sent
-	 * @param filename String representation of the file and directory that is related
+	 * @param filePath String representation of the file and directory that is related
 	 * to the write request
 	 * @param mode Mode of the transfer i.e Netascii, octet, etc.
 	 */
-	public void read(InetAddress addr, String filename, String mode) {
+	public void read(InetAddress addr, String filePath, String mode) {
 		try {
 			// Form request and send to server
-			if (verbose) System.out.println("Sending a READ request to server for file \"" + filename + "\".");
-			Request r = new Request(Request.Type.READ,filename,mode);
+			Request r = new Request(Request.Type.READ,filePath,mode);
+			if (verbose) System.out.println("Sending a READ request to server for file \"" + r.getFileName() + "\".");
 			DatagramPacket requestPacket = TFTP.formRQPacket(addr, SEND_PORT, r);
 			DatagramPacket dataPacket;
 			// Send the request
@@ -159,14 +162,19 @@ public class Client implements Exitable {
 				// Wait for DATA from server
 				if (verbose) System.out.println("Waiting for DATA packet from server...");
 				sendReceiveSocket.receive(dataPacket);
-
-				// Throw exception if wrong OP code
-				if (TFTP.getOpCode(dataPacket) != TFTP.DATA_OP_CODE)
-					throw new Exception("Expected DATA packet but a non-DATA packet was received.");
-
-				// Throw exception if unexpected block number
-				if (TFTP.getBlockNumber(dataPacket) != currentBlockNumber)
-					throw new Exception("DATA packet received has an unexpected block number.");
+				
+				switch (TFTP.getOpCode(dataPacket)) {
+					case TFTP.DATA_OP_CODE:
+						// Throw exception if unexpected block number
+						if (TFTP.getBlockNumber(dataPacket) != currentBlockNumber)
+							throw new Exception("DATA packet received has an unexpected block number.");
+						break;
+					case TFTP.ERROR_OP_CODE:
+						System.out.println("ERROR packet received: " + TFTP.getErrorMessage(dataPacket) + "\n");
+						return;
+					default:
+						throw new Exception("Expected DATA packet but a non-DATA packet was received.");
+				}
 
 				// If this is the first DATA packet received, record the address and port
 				if (TFTP.getBlockNumber(dataPacket) == 1) {
@@ -185,13 +193,13 @@ public class Client implements Exitable {
 				DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
 				if (verbose) System.out.println("ACK " + currentBlockNumber + " sent.");
 				sendReceiveSocket.send(ackPacket);
-				currentBlockNumber = (currentBlockNumber + 1) % 65535;
+				currentBlockNumber = (currentBlockNumber + 1) % 65536;
 
 				// Newline
 				if (verbose) System.out.println();
 			} while (TFTP.getData(dataPacket).length == TFTP.MAX_DATA_SIZE);
 			if (verbose) System.out.println("Writing bytes to file...");
-			TFTP.writeBytesToFile("tmp/" + filename, fileBytes);
+			TFTP.writeBytesToFile(filePath, fileBytes);
 			if (verbose) System.out.println("Read complete.");
 		}
 		catch(Exception e) {
@@ -209,12 +217,25 @@ public class Client implements Exitable {
 		Scanner in = new Scanner(System.in);
 		String cmd;
 		Request.Type t = null;
-		String filename;
+		String fileName;
+		String filePath;
+		
+		// Sets the directory for the client
+		do {
+			System.out.println("Please enter the directory that you want to use for the client files:");
+			System.out.println("Must end with either a '/' or a '\\' to work");
+			directory = in.next();
+			if (!TFTP.isDirectory(directory)) {
+				System.out.println("Directory does not exist.");
+			}
+		} while (!TFTP.isDirectory(directory));
+		System.out.println("The directory you entered is: " + directory);
+
 		while (true) {
 			boolean validCmd = false;
 			while(!validCmd) {
 				// Get get command
-				System.out.println("Please enter a command:");
+				System.out.println("Please enter a command (read/write/exit):");
 				cmd = in.next();
 				// Quit server if exit command given
 				if (cmd.equalsIgnoreCase("exit")) {
@@ -233,20 +254,36 @@ public class Client implements Exitable {
 				}
 			}
 
-			// Get filename
-			System.out.println("Please enter a filename:");
-			filename = in.next();
+			// Get file name
+			System.out.println("Please enter the name of the file to transfer:");
+			fileName = in.next();
+			filePath = directory + fileName;
 			
 			// Check if the file exists and file readable on client if WRITE request, otherwise continue loop
 			if (t == Request.Type.WRITE) {
-				if (TFTP.isFileExists(filename)) {
-					System.err.println("File does not exist");
+				if (TFTP.isFileExist(filePath) && !TFTP.isDirectory(filePath)) {
+					if (!TFTP.isReadable(filePath)) {
+						// Echo error message for access violation
+						System.err.println("File access violation.\n");
+						continue;
+					} else {
+						// Echo successful file found
+						System.out.println("File found.\n");
+					}
+				} else {
+					// Echo error message for file not found
+					System.err.println("File not found.\n");
 					continue;
 				}
-				
-				if (TFTP.isReadable(filename)) {
-					System.err.println("File is not readable");
+			// For read requests, check if file already exists on the client
+			} else if (t == Request.Type.READ) {
+				if (TFTP.isFileExist(filePath) && !TFTP.isDirectory(filePath)) {
+					// Echo error message
+					System.err.println("File already exists.\n");
 					continue;
+				} else {
+					// Prints empty line
+					System.out.println("");
 				}
 			}
 
@@ -254,10 +291,10 @@ public class Client implements Exitable {
 			try {
 				switch (t) {
 					case READ:
-						this.read(InetAddress.getLocalHost(), filename, "netascii");
+						this.read(InetAddress.getLocalHost(), filePath, "netascii");
 						break;
 					case WRITE:
-						this.write(InetAddress.getLocalHost(), filename, "netascii");
+						this.write(InetAddress.getLocalHost(), filePath, "netascii");
 						break;
 					default:
 						System.out.println("Invalid request type. Quitting...");

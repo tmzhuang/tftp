@@ -1,5 +1,8 @@
 package tftp;
 
+import java.io.File;
+import java.nio.file.Path;
+
 // Class to encapsulate data about a request
 public class Request {
 	public enum Type {
@@ -7,12 +10,12 @@ public class Request {
 	}
 
 	private Type type;
-	private String filename;
+	private String filePath;
 	private String mode;
 
 	public Request(Type t, String f, String m) {
 		type = t;
-		filename = f;
+		filePath = f;
 		mode = m;
 	}
 
@@ -20,8 +23,14 @@ public class Request {
 		return type;
 	}
 
-	public String getFilename() {
-		return filename;
+	public String getFilePath() {
+		return filePath;
+	}
+	
+	public String getFileName() {
+		File file = new File(filePath);
+		Path path = file.toPath();
+		return path.getFileName().toString();
 	}
 
 	public String getMode() {

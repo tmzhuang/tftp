@@ -1,6 +1,10 @@
 package tftp;
 
 import java.net.*;
+import java.nio.file.DirectoryNotEmptyException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 import java.util.*;
 import java.io.*;
 
@@ -27,6 +31,9 @@ public class TFTP {
 	public static final int ERROR_CODE_FILE_NOT_FOUND = 1;
 	public static final int ERROR_CODE_ACCESS_VIOLATION = 2;
 	public static final int ERROR_CODE_DISK_FULL = 3;
+	
+	public static final String CLIENT_DIRECTORY = "/home/brandonto/client_files/";
+	public static final String SERVER_DIRECOTRY = "/home/brandonto/server_files/";
 
 	/**
 	 * Forms a DatagramPacket using Request r with information about request type
@@ -57,7 +64,7 @@ public class TFTP {
 		}
 
 		// Add filename to packet data
-		byte[] fbytes = r.getFilename().getBytes();
+		byte[] fbytes = r.getFileName().getBytes();
 		System.arraycopy(fbytes,0,buf,OP_CODE_SIZE,fbytes.length);
 
 		// Add 0 byte padding
@@ -86,14 +93,14 @@ public class TFTP {
 	 *
 	 * @param addr InetAddress of packet destination
 	 * @param port Port number of packet destination
-	 * @param filename Filename of file to read
+	 * @param filePath path of file to read
 	 *
-	 * @return A queue of DATA packets formed from the file specificed in 512-byte chunks
+	 * @return A queue of DATA packets formed from the file specified in 512-byte chunks
 	 */
-	public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filename) {
+	public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filePath) {
 		Queue<DatagramPacket> packetQueue = new ArrayDeque<DatagramPacket>();
 		try {
-			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filename));
+			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filePath));
 			byte[] data = new byte[MAX_DATA_SIZE];
 			int blockNumber = 1;
 			int n, lastn;
@@ -139,12 +146,12 @@ public class TFTP {
 	/**
 	 * Write an array of bytes to a file
 	 *
-	 * @param filename Name of file (including directory) to write to
+	 * @param filePath Name of file (including directory) to write to
 	 * @param fileBytes Array of bytes to write
 	 */
-	public static void writeBytesToFile(String filename, byte[] fileBytes) {
+	public static void writeBytesToFile(String filePath, byte[] fileBytes) {
 		try {
-			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
+			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filePath));
 			out.write(fileBytes);
 			out.close();
 		} catch(Exception e) {
@@ -453,26 +460,57 @@ public class TFTP {
 		return (int)(myByte & 0xFF);
 	}
 
-	public static boolean isReadable(String fileName) {
-		/*switch (r.getType()) {
-		case READ:
-			boolean isReadable 
-		}*/
-		return false;
+	public static boolean isFileExist(String filePath) {
+		File file = new File(filePath);
+		return file.exists();
 	}
-
-	public static boolean isWritable(String fileName) {
-		/*switch (r.getType()) {
-		case READ:
-			boolean isReadable 
-		}*/
-		return false;
+	
+	public static boolean isDirectory(String filePath) {
+		File file = new File(filePath);
+		return file.isDirectory();
 	}
+	
+	public static boolean isReadable(String filePath) {
+		File file = new File(filePath);
 
-	public static boolean isFileExists(String fileName) {
+		if (!file.canRead()) {
+			return false;
+		}
 
-		return false;
+		try {
+			FileReader fileReader = new FileReader(file.getAbsolutePath());
+			fileReader.read();
+			fileReader.close();
+		} catch (Exception e) {
+			return false;
+		}
+		
+		return true;
 	}
-
+	
+	public static boolean isWritable(String filePath) {
+		File file = new File(filePath);
+		return file.canWrite();
+	}
+	
+	public static boolean delete(String filePath) {
+		File file = new File(filePath);
+		Path path = file.toPath();
+		
+		try {
+			Files.delete(path);
+		} catch (NoSuchFileException e) {
+			System.err.println("No such file or directory");
+			return false;
+		} catch (DirectoryNotEmptyException e) {
+			System.err.println("Directory not empty");
+			return false;
+		} catch (IOException e) {
+			System.err.println("Something went wrong here");
+			return false;
+		}
+		
+		return true;
+	}
 
 }
