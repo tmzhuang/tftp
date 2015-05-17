@@ -5,13 +5,18 @@ import static org.junit.Assert.*;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Arrays;
+import java.util.*;
+import java.io.*;
 
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.*;
 
 import tftp.*;
 
 public class TFTPTest {
+	@Rule
+	public ExpectedException exception = ExpectedException.none();
 
 	//public static DatagramPacket formRQPacket(InetAddress addr, int port, Request r)
 	@Test
@@ -83,6 +88,141 @@ public class TFTPTest {
 	}
 
 	//public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filename)
+	//File does not exist
+	//Expects exception thrown
+	//@Test (expected = FileNotFoundException.class)
+	public void formDATAPacketsTest1() {
+		// Setup
+		exception.expect(FileNotFoundException.class);
+		try {
+			InetAddress addr = InetAddress.getLocalHost();
+			int port = 69;
+			String filename = "formDATAPacketsTest1.txt";
+
+			Queue<DatagramPacket> dataPackets = TFTP.formDATAPackets(addr, port, filename);
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	//public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filename)
+	//Test empty file
+	//Expects empty queue returned
+	@Test
+	public void formDATAPacketsTest2() {
+		// Setup
+		try {
+			InetAddress addr = InetAddress.getLocalHost();
+			int port = 69;
+			String filename = "formDATAPacketsTest2.txt";
+
+			File f= new File(filename);
+			f.createNewFile();
+
+			Queue<DatagramPacket> dataPackets = TFTP.formDATAPackets(addr, port, filename);
+
+			// Check that queue is empty
+			assertTrue(dataPackets.isEmpty());
+
+			// Cleanup
+			f.delete();
+		} catch(Exception e) {
+		}
+	}
+
+	//public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filename)
+	//Test normal file of size 2*512 + 1 (not a multiple of 512)
+	//Expects a datagram packet queue with 3 packets. The first two should have data of size 512,
+	//and the last should have a size of 1
+	@Test
+	public void formDATAPacketsTest3() {
+		try {
+			// Setup
+			InetAddress addr = InetAddress.getLocalHost();
+			int port = 69;
+			String filename = "formDATAPacketsTest3.txt";
+
+			File f= new File(filename);
+			f.createNewFile();
+
+			// Write 2*512 + 1 bytes to file
+			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(f));
+			byte[] bytes = new byte[512*2+1];
+			out.write(bytes);
+			out.close();
+
+			Queue<DatagramPacket> dataPackets = TFTP.formDATAPackets(addr, port, filename);
+
+			// Check that queue is correct length
+			assertTrue(dataPackets.size() == 3);
+			// For each packek, check length and op code
+			DatagramPacket packet1 = dataPackets.remove();
+			assertTrue(TFTP.getData(packet1).length == 512);
+			assertTrue(TFTP.getOpCode(packet1) == TFTP.DATA_OP_CODE);
+
+			DatagramPacket packet2 = dataPackets.remove();
+			assertTrue(TFTP.getData(packet2).length == 512);
+			assertTrue(TFTP.getOpCode(packet2) == TFTP.DATA_OP_CODE);
+
+			DatagramPacket packet3 = dataPackets.remove();
+			assertTrue(TFTP.getData(packet3).length == 1);
+			assertTrue(TFTP.getOpCode(packet3) == TFTP.DATA_OP_CODE);
+
+			// Cleanup
+			f.delete();
+		} catch(Exception e) {
+		}
+	}
+
+	//public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filename)
+	//Test normal file of size 2*512 + 1 (not a multiple of 512)
+	//Expects a datagram packet queue with 3 packets. The first two should have data of size 512,
+	//and the last should have a size of 1
+	@Test
+	public void formDATAPacketsTest4() {
+		try {
+			// Setup
+			InetAddress addr = InetAddress.getLocalHost();
+			int port = 69;
+			String filename = "formDATAPacketsTest4.txt";
+
+			File f= new File(filename);
+			f.createNewFile();
+
+			// Write 2*512 + 1 bytes to file
+			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(f));
+			byte[] bytes = new byte[512*3];
+			Arrays.fill(bytes, (byte)1);
+			out.write(bytes);
+			out.close();
+
+			Queue<DatagramPacket> dataPackets = TFTP.formDATAPackets(addr, port, filename);
+
+			// Check that queue is correct length
+			// Length should be 4 because there needs to be an empty data packet with length 0
+			assertTrue(dataPackets.size() == 4);
+			// For each packek, check length and op code
+			DatagramPacket packet1 = dataPackets.remove();
+			assertTrue(TFTP.getData(packet1).length == 512);
+			assertTrue(TFTP.getOpCode(packet1) == TFTP.DATA_OP_CODE);
+
+			DatagramPacket packet2 = dataPackets.remove();
+			assertTrue(TFTP.getData(packet2).length == 512);
+			assertTrue(TFTP.getOpCode(packet2) == TFTP.DATA_OP_CODE);
+
+			DatagramPacket packet3 = dataPackets.remove();
+			assertTrue(TFTP.getData(packet3).length == 512);
+			assertTrue(TFTP.getOpCode(packet3) == TFTP.DATA_OP_CODE);
+
+			DatagramPacket packet4 = dataPackets.remove();
+			assertTrue(TFTP.getData(packet4).length == 0);
+			assertTrue(TFTP.getOpCode(packet4) == TFTP.DATA_OP_CODE);
+
+			// Cleanup
+			f.delete();
+		} catch(Exception e) {
+		}
+	}
 
 	//public static void writeDATAToFile(DatagramPacket dataPacket, String filename)
 
@@ -283,8 +423,24 @@ public class TFTPTest {
 		assertTrue(TFTP.toUnsignedInt(afterSignFlip) == 128);
 	}
 
+	//public static DatagramPacket formERRORPacket(InetAddress addr, int port, int errorCode, String errMsg) 
+	@Test
+	public void formErrorPacketTest1() {
+		String filename = "formErrorPacketTest1.txt";
+		File f = new File(filename);
+		
+		// Test non-existent file
+		assertFalse(TFTP.fileExists(filename));
 
-	//public static DatagramPacket formERRORPacket(InetAddress addr, int port, int errorCode, String errMsg) {
+		try {
+			// Test existent file
+			f.createNewFile();
+			assertTrue(TFTP.fileExists(filename));
+
+			f.delete();
+		} catch(Exception e) {
+		}
+	}
 
 	//public static String getErrorMessage(DatagramPacket packet)
 	
