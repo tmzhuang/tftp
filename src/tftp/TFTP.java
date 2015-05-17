@@ -93,8 +93,9 @@ public class TFTP {
 	 * @param filePath path of file to read
 	 *
 	 * @return A queue of DATA packets formed from the file specified in 512-byte chunks
+	 * @throws FileNotFoundException 
 	 */
-	public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filePath) {
+	public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filePath) throws FileNotFoundException {
 		Queue<DatagramPacket> packetQueue = new ArrayDeque<DatagramPacket>();
 		try {
 			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filePath));
@@ -115,6 +116,9 @@ public class TFTP {
 			in.close();
 			// If the file is a multiple of 512, add a 0-byte data packet
 			if (lastn == MAX_DATA_SIZE) packetQueue.add(formDATAPacket(addr, port, blockNumber, new byte[0]));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			throw e;
 		} catch(Exception e) {
 			e.printStackTrace();
 			System.exit(1);

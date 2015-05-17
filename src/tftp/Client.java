@@ -1,5 +1,6 @@
 package tftp;
 
+import java.io.FileNotFoundException;
 import java.net.*;
 import java.util.*;
 
@@ -94,7 +95,12 @@ public class Client implements Exitable {
 
 		// Covert file into queue of datagram packets
 		if (verbose) System.out.println("Forming packet queue from file...");
-		Queue<DatagramPacket> dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filePath);
+		Queue<DatagramPacket> dataPacketQueue = null;
+		try {
+			dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filePath);
+		} catch (FileNotFoundException e1) {
+			e1.printStackTrace();
+		}
 		if (verbose)System.out.println("Packets formed. Ready to send " + dataPacketQueue.size() + " blocks.");
 
 		// Send each packet and wait for an ACK until queue is empty

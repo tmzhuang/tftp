@@ -129,9 +129,40 @@ public class Server implements Exitable {
 				socket.close();
 				return;
 			}
+
+			// Send an error packet if file exists but is not readable
+			if (TFTP.fileExists(filePath) && !TFTP.isReadable(filePath))
+			{
+				// Creates a "access violation" error packet
+				DatagramPacket errorPacket = TFTP.formERRORPacket(
+						replyAddr,
+						TID,
+						TFTP.ERROR_CODE_ACCESS_VIOLATION,
+						fileName + " exists on the server but could not be open.");
+
+				// Sends error packet
+				try {
+					socket.send(errorPacket);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+
+				// Echo error message
+				System.err.println("File access violation. Aborting transfer...\n");
+
+				// Closes socket and aborts thread
+				socket.close();
+				return;
+			}
 			
 			if (verbose) System.out.println("Forming packet queue from file...");
-			Queue<DatagramPacket> dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filePath);
+			Queue<DatagramPacket> dataPacketQueue = null;
+			try {
+				dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filePath);
+			} catch (FileNotFoundException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 			if (verbose) System.out.println("Packets formed. Ready to send " + dataPacketQueue.size() + " blocks.");
 
 			// Send each packet and wait for an ACK until queue is empty
@@ -203,8 +234,6 @@ public class Server implements Exitable {
 							TID,
 							TFTP.ERROR_CODE_ACCESS_VIOLATION,
 							fileName + " exists on the server but could not be overwritten.");
-					
-					System.out.println(TFTP.getErrorMessage(errorPacket));
 					
 					// Sends error packet
 					socket.send(errorPacket);
