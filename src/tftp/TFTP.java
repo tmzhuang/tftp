@@ -149,16 +149,24 @@ public class TFTP {
 	 *
 	 * @param filePath Name of file (including directory) to write to
 	 * @param fileBytes Array of bytes to write
+	 * 
+	 * @return true if write successful, false if disk is full
 	 */
-	public static void writeBytesToFile(String filePath, byte[] fileBytes) {
+	public static boolean writeBytesToFile(String filePath, byte[] fileBytes) {
+		BufferedOutputStream out;
 		try {
-			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filePath));
+			out = new BufferedOutputStream(new FileOutputStream(filePath));
 			out.write(fileBytes);
 			out.close();
-		} catch(Exception e) {
-			e.printStackTrace();
-			System.exit(1);
+		} catch(IOException e) {
+			if (e.getMessage().equals("No space left on device")) {
+				return false;
+			} else {
+				e.printStackTrace();
+				System.exit(1);
+			}
 		}
+		return true;
 	}
 
 	/**
@@ -473,6 +481,11 @@ public class TFTP {
 	public static boolean isDirectory(String filePath) {
 		File file = new File(filePath);
 		return file.isDirectory();
+	}
+	
+	public static long getFreeSpaceOnFileSystem(String filePath) {
+		File file = new File(filePath);
+		return file.getFreeSpace();
 	}
 	
 	public static boolean isReadable(String filePath) {
