@@ -63,7 +63,6 @@ public class Client implements Exitable {
 		// Wait for ACK0
 		try {
 			// ACK should be set size
-			//int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE;
 			int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
 			byte[] buf = new byte[bufferSize];
 			// Get a packet from server
@@ -118,7 +117,8 @@ public class Client implements Exitable {
 			// Wait for ACK
 			try {
 				// ACK should be set size
-				int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE;
+				//int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE;
+				int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
 				byte[] buf = new byte[bufferSize];
 				// Get a packet from server
 				DatagramPacket receivePacket = new DatagramPacket(buf,buf.length);
@@ -129,13 +129,19 @@ public class Client implements Exitable {
 				if (!receivePacket.getAddress().equals(replyAddr) || receivePacket.getPort() != TID) 
 					throw new Exception("Packet recevied from invalid sender.");
 
-				// Throw exception if wrong OP code
-				if (TFTP.getOpCode(receivePacket) != TFTP.ACK_OP_CODE)
-					throw new Exception("Expected ACK packet but a non-ACK packet was received.");
-
-				// Throw exception if DATA and ACK block numbers don't match
-				if (TFTP.getBlockNumber(receivePacket) != currentBlockNumber)
-					throw new Exception("ACK packet received does not match block number of DATA sent.");
+				switch (TFTP.getOpCode(receivePacket)) {
+					case TFTP.ACK_OP_CODE:
+						// Throw exception if DATA and ACK block numbers don't match
+						if (TFTP.getBlockNumber(receivePacket) != currentBlockNumber)
+							throw new Exception("ACK packet received does not match block number of DATA sent.");
+						break;
+					case TFTP.ERROR_OP_CODE:
+						System.out.println("ERROR packet received: " + TFTP.getErrorMessage(receivePacket) + "\n");
+						return;
+					default:
+						// Throw exception if wrong OP code
+						throw new Exception("Expected ACK packet but a non-ACK packet was received.");
+				}
 
 				if (verbose) System.out.println("ACK" + currentBlockNumber + " received.");
 			} catch(Exception e) {
@@ -202,6 +208,28 @@ public class Client implements Exitable {
 				// Write data to file
 				if (verbose) System.out.println("Appending current block to filebytes.");
 				fileBytes = TFTP.appendData(dataPacket, fileBytes);
+				if (fileBytes.length > TFTP.getFreeSpaceOnFileSystem(filePath)) {
+					// Creates a "file not found" error packet
+					DatagramPacket errorPacket = TFTP.formERRORPacket(
+							replyAddr,
+							TID,
+							TFTP.ERROR_CODE_DISK_FULL,
+							r.getFileName() + " could not be transferred because disk is full.");
+
+					// Sends error packet
+					try {
+						sendReceiveSocket.send(errorPacket);
+					} catch (Exception e) {
+					}
+
+					// Echo error message
+					if (verbose) System.err.println("Disk full. Aborting transfer...\n");
+
+					// Closes socket and aborts thread
+					sendReceiveSocket.close();
+					
+					return;
+				}
 
 				// Form a ACK packet to respond with
 				DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
