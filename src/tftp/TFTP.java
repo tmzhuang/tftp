@@ -32,9 +32,6 @@ public class TFTP {
 	public static final int ERROR_CODE_ACCESS_VIOLATION = 2;
 	public static final int ERROR_CODE_DISK_FULL = 3;
 	
-	public static final String CLIENT_DIRECTORY = "/home/brandonto/client_files/";
-	public static final String SERVER_DIRECOTRY = "/home/brandonto/server_files/";
-
 	/**
 	 * Forms a DatagramPacket using Request r with information about request type
 	 * (read, write, or test), filename, and mode (ascii, octet, etc.).
@@ -354,12 +351,16 @@ public class TFTP {
 	 * @return ERROR packet formed with given inputs
 	 */
 	public static DatagramPacket formERRORPacket(InetAddress addr, int port, int errorCode, String errMsg) {
-		byte[] buf = new byte[100];
+		///////////////////////////////
+		// 4+data.length because 2 bytes for op code and 2 bytes for blockNumber
+		byte[] sbytes = errMsg.getBytes();
+		byte[] buf = new byte[OP_CODE_SIZE + BLOCK_NUMBER_SIZE + sbytes.length + 1];
 
 		// Op code
 		buf[0] = 0;
-		buf[1] = 5;
+		buf[1] = ERROR_OP_CODE;
 
+		// Block number
 		// Block number
 		try {
 			byte[] blockNumberBytes = blockNumberToBytes(errorCode);
@@ -369,13 +370,13 @@ public class TFTP {
 			System.exit(1);
 		}
 
-		// Message
-		byte[] sbytes = errMsg.getBytes();
+		// Data
 		int startIndex = OP_CODE_SIZE + BLOCK_NUMBER_SIZE;
-		System.arraycopy(sbytes,0,buf,startIndex, sbytes.length);
+		System.arraycopy(sbytes, 0, buf, startIndex, sbytes.length);
+
 		buf[OP_CODE_SIZE + BLOCK_NUMBER_SIZE + sbytes.length] = 0;
 
-		return new DatagramPacket(buf,OP_CODE_SIZE + BLOCK_NUMBER_SIZE + sbytes.length+1,addr,port);	
+		return new DatagramPacket(buf, buf.length, addr, port);	
 	}
 
 	/**
@@ -460,7 +461,7 @@ public class TFTP {
 		return (int)(myByte & 0xFF);
 	}
 
-	public static boolean isFileExist(String filePath) {
+	public static boolean fileExists(String filePath) {
 		File file = new File(filePath);
 		return file.exists();
 	}

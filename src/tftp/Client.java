@@ -62,26 +62,34 @@ public class Client implements Exitable {
 		// Wait for ACK0
 		try {
 			// ACK should be set size
-			int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE;
+			//int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE;
+			int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
 			byte[] buf = new byte[bufferSize];
 			// Get a packet from server
 			DatagramPacket receivePacket = new DatagramPacket(buf,buf.length);
 			if (verbose) System.out.println("Waiting for ACK0...");
 			sendReceiveSocket.receive(receivePacket);
 
-			// Throw exception if wrong OP code
-			if (TFTP.getOpCode(receivePacket) != TFTP.ACK_OP_CODE)
+			// TODO (Brandon)
+			switch (TFTP.getOpCode(receivePacket)) {
+			case TFTP.ACK_OP_CODE:
+				// Throw exception if unexpected block number
+				if (TFTP.getBlockNumber(receivePacket) != 0)
+					throw new Exception("ACK packet received does not match block number of DATA sent.");
+				break;
+			case TFTP.ERROR_OP_CODE:
+				System.out.println("ERROR packet received: " + TFTP.getErrorMessage(receivePacket) + "\n");
+				return;
+			default:
 				throw new Exception("Expected ACK packet but a non-ACK packet was received.");
-
-			// Throw exception if DATA and ACK block numbers don't match
-			if (TFTP.getBlockNumber(receivePacket) != 0)
-				throw new Exception("ACK packet received does not match block number of DATA sent.");
+			}
 
 			if (verbose) System.out.println("ACK0 received.");
 			this.replyAddr = receivePacket.getAddress();
 			this.TID = receivePacket.getPort();
 		} catch(Exception e) {
 			System.out.println(e.getMessage());
+			return;
 		}
 
 		// Covert file into queue of datagram packets
@@ -261,7 +269,7 @@ public class Client implements Exitable {
 			
 			// Check if the file exists and file readable on client if WRITE request, otherwise continue loop
 			if (t == Request.Type.WRITE) {
-				if (TFTP.isFileExist(filePath) && !TFTP.isDirectory(filePath)) {
+				if (TFTP.fileExists(filePath) && !TFTP.isDirectory(filePath)) {
 					if (!TFTP.isReadable(filePath)) {
 						// Echo error message for access violation
 						System.err.println("File access violation.\n");
@@ -277,7 +285,7 @@ public class Client implements Exitable {
 				}
 			// For read requests, check if file already exists on the client
 			} else if (t == Request.Type.READ) {
-				if (TFTP.isFileExist(filePath) && !TFTP.isDirectory(filePath)) {
+				if (TFTP.fileExists(filePath) && !TFTP.isDirectory(filePath)) {
 					// Echo error message
 					System.err.println("File already exists.\n");
 					continue;

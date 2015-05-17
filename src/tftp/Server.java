@@ -108,7 +108,7 @@ public class Server implements Exitable {
 			String filePath = directory + fileName;
 			
 			// Send an error packet if file does not exist or is a directory
-			if (!TFTP.isFileExist(filePath) || TFTP.isDirectory(filePath)) {
+			if (!TFTP.fileExists(filePath) || TFTP.isDirectory(filePath)) {
 				// Creates a "file not found" error packet
 				DatagramPacket errorPacket = TFTP.formERRORPacket(
 						replyAddr,
@@ -187,10 +187,35 @@ public class Server implements Exitable {
 		 */
 		private void handleWrite(Request r) {
 			try {
+				String fileName = r.getFileName();
+				String filePath = directory + fileName;
 				int maxPacketLen = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
 				int currentBlockNumber = 1;
 				DatagramPacket receivePacket;
 				byte[] fileBytes = new byte[0];
+
+				// There is an error if the file exists and it not writable
+				if (TFTP.fileExists(filePath) && !TFTP.isWritable(filePath))
+				{
+					// Creates a "access violation" error packet
+					DatagramPacket errorPacket = TFTP.formERRORPacket(
+							replyAddr,
+							TID,
+							TFTP.ERROR_CODE_ACCESS_VIOLATION,
+							fileName + " exists on the server but could not be overwritten.");
+					
+					System.out.println(TFTP.getErrorMessage(errorPacket));
+					
+					// Sends error packet
+					socket.send(errorPacket);
+
+					// Echo error message
+					if (verbose) System.err.println("File access violation. Aborting transfer...\n");
+					
+					// Closes socket and aborts thread
+					socket.close();
+					return;
+				}
 
 				// Form and send ACK0
 				if (verbose) System.out.println("Sending ACK0.");
