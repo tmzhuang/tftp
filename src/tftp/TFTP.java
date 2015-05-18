@@ -218,14 +218,15 @@ public class TFTP {
 		// If isn't DATA or ACK, throw an exception
 		if (!(isDATA || isACK)) throw new IllegalArgumentException("Cannot get block number of packet that is not DATA or ACK.");
 
-		// Check that the block number is valid
-		if (!isValidBlockNumber(getBlockNumber(packet))) throw new IllegalArgumentException("Block number out of range.");
-
 		// Get the block number as a byte array
 		byte[] blockNumberBytes = new byte[BLOCK_NUMBER_SIZE];
 		System.arraycopy(packet.getData(),OP_CODE_SIZE,blockNumberBytes,0,BLOCK_NUMBER_SIZE);
 
-		return bytesToBlockNumber(blockNumberBytes);
+		// Check that the block number is valid
+		int blockNumber = bytesToBlockNumber(blockNumberBytes);
+		if (!isValidBlockNumber(blockNumber)) throw new IllegalArgumentException("Block number out of range.");
+
+		return blockNumber;
 	}
 
 	/**
