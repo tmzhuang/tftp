@@ -31,6 +31,11 @@ public class TFTP {
 	public static final int ERROR_CODE_FILE_NOT_FOUND = 1;
 	public static final int ERROR_CODE_ACCESS_VIOLATION = 2;
 	public static final int ERROR_CODE_DISK_FULL = 3;
+	public static final int MIN_PORT = 1;
+	public static final int MAX_PORT = 65535;
+	public static final int MAX_ERROR_CODE = 7;
+	public static final int MAX_OP_CODE = 5;
+	public static final int MAX_BLOCK_NUMBER = 65535;
 	
 	/**
 	 * Forms a DatagramPacket using Request r with information about request type
@@ -43,6 +48,7 @@ public class TFTP {
 	 * @return Datagram packet for specified address and port with given request
 	 */
 	public static DatagramPacket formRQPacket(InetAddress addr, int port, Request r) {
+		if (!isValidPort(port)) throw new IllegalArgumentException();
 		int currentIndex;
 		// Create byte array for packet
 		byte[] buf = new byte[BUF_SIZE];
@@ -96,6 +102,8 @@ public class TFTP {
 	 * @throws FileNotFoundException 
 	 */
 	public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filePath) throws FileNotFoundException {
+		if (!isValidPort(port)) throw new IllegalArgumentException();
+		if (filePath.isEmpty()) throw new IllegalArgumentException();
 		Queue<DatagramPacket> packetQueue = new ArrayDeque<DatagramPacket>();
 		try {
 			BufferedInputStream in = new BufferedInputStream(new FileInputStream(filePath));
@@ -109,7 +117,7 @@ public class TFTP {
 				byte[] buf = new byte[n];
 				System.arraycopy(data,0,buf,0,n);
 				packetQueue.add(formDATAPacket(addr, port, blockNumber, buf));
-				blockNumber = (blockNumber + 1) % 65535;
+				blockNumber = (blockNumber + 1) % MAX_BLOCK_NUMBER;
 				lastn = n;
 			}
 			// Close stream
@@ -153,6 +161,7 @@ public class TFTP {
 	 * @return true if write successful, false if disk is full
 	 */
 	public static boolean writeBytesToFile(String filePath, byte[] fileBytes) {
+		if (filePath.isEmpty()) throw new IllegalArgumentException();
 		BufferedOutputStream out;
 		try {
 			out = new BufferedOutputStream(new FileOutputStream(filePath));
@@ -180,7 +189,17 @@ public class TFTP {
 		byte[] opCodeBytes = new byte[OP_CODE_SIZE];
 		byte[] data = packet.getData();
 		System.arraycopy(data,0,opCodeBytes,0,OP_CODE_SIZE);
-		return toUnsignedInt(opCodeBytes[1]);
+		int opCode = toUnsignedInt(opCodeBytes[1]);
+		if (!isValidOpCode(opCode))  throw new IllegalArgumentException("DatagramPacket is not a valid TFTP packet.");
+		return opCode;
+	}
+
+	public static boolean isValidOpCode(int opCode) {
+		return opCode >= 1 && opCode <= 5;
+	}
+
+	public static boolean isValidBlockNumber(int blockNumber) {
+		return blockNumber>=0 && blockNumber<=MAX_BLOCK_NUMBER;
 	}
 
 	/**
@@ -190,14 +209,17 @@ public class TFTP {
 	 *
 	 * @return The block number of the ACK or DATA packet
 	 */
-	public static int getBlockNumber(DatagramPacket packet) throws IllegalArgumentException {
+	public static int getBlockNumber(DatagramPacket packet) {
 		// Check that packet is either DATA or ACK
 		int opCode = getOpCode(packet);
 		boolean isDATA = opCode == DATA_OP_CODE;
 		boolean isACK = opCode == ACK_OP_CODE;
 
 		// If isn't DATA or ACK, throw an exception
-		if (!(isDATA || isACK)) throw new IllegalArgumentException();
+		if (!(isDATA || isACK)) throw new IllegalArgumentException("Cannot get block number of packet that is not DATA or ACK.");
+
+		// Check that the block number is valid
+		if (!isValidBlockNumber(getBlockNumber(packet))) throw new IllegalArgumentException("Block number out of range.");
 
 		// Get the block number as a byte array
 		byte[] blockNumberBytes = new byte[BLOCK_NUMBER_SIZE];
@@ -214,13 +236,16 @@ public class TFTP {
 	 *
 	 * @return The data portion of a DATA packet as a byte array
 	 */
-	public static byte[] getData(DatagramPacket packet) throws IllegalArgumentException {
+	public static byte[] getData(DatagramPacket packet) {
 		// Check that packet is DATA
 		int opCode = getOpCode(packet);
 		boolean isDATA = opCode == DATA_OP_CODE;
 
 		// If packet isn't DATA, throw exception
 		if (!isDATA) throw new IllegalArgumentException();
+
+		// Check that the block number is valid
+		if (!isValidBlockNumber(getBlockNumber(packet))) throw new IllegalArgumentException();
 
 		int dataLen = packet.getLength() - OP_CODE_SIZE - BLOCK_NUMBER_SIZE;
 		int dataStart = OP_CODE_SIZE + BLOCK_NUMBER_SIZE;
@@ -230,8 +255,11 @@ public class TFTP {
 		return data;
 	}
 
-	public static String getErrorMessage(DatagramPacket packet) throws IllegalArgumentException {
+	public static boolean isValidErrorCode(int errorCode) {
+		return errorCode>=0 && errorCode<=MAX_ERROR_CODE;
+	}
 
+	public static String getErrorMessage(DatagramPacket packet) {
 		//If packet isn't an error, throw exception
 		if(getOpCode(packet) != ERROR_OP_CODE) throw new IllegalArgumentException();
 
@@ -244,16 +272,19 @@ public class TFTP {
 		return errorMsg;
 	}
 
-	public static int getErrorCode(DatagramPacket packet) throws IllegalArgumentException {
+	public static int getErrorCode(DatagramPacket packet) {
 
 		//If packet isn't an error, throw exception
 		if(getOpCode(packet) != ERROR_OP_CODE) throw new IllegalArgumentException();
 
-
 		byte[] errorCodeBytes = new byte[ERROR_CODE_SIZE];
 		System.arraycopy(packet.getData(),OP_CODE_SIZE,errorCodeBytes,0,ERROR_CODE_SIZE);
 
-		return bytesToBlockNumber(errorCodeBytes);
+		// Check that packet has a valid error code
+		int errorCode = bytesToBlockNumber(errorCodeBytes);
+		if (!isValidErrorCode(errorCode)) throw new IllegalArgumentException();
+
+		return errorCode;
 	}
 
 
@@ -300,7 +331,7 @@ public class TFTP {
 	 *
 	 * @return 2-byte representation of given block number
 	 */
-	public static byte[] blockNumberToBytes(int blockNumber) throws IllegalArgumentException {
+	public static byte[] blockNumberToBytes(int blockNumber) {
 		if (blockNumber<0 || blockNumber>66535) throw new IllegalArgumentException();
 
 		byte[] blockNumberBytes = new byte[2];
@@ -317,7 +348,7 @@ public class TFTP {
 	 *
 	 * @return Integer representation of given byte array
 	 */
-	public static int bytesToBlockNumber(byte[] bytes) throws IllegalArgumentException {
+	public static int bytesToBlockNumber(byte[] bytes) {
 		if (bytes.length != 2) throw new IllegalArgumentException();
 		int msb = toUnsignedInt(bytes[0]);
 		int lsb = toUnsignedInt(bytes[1]);
@@ -403,7 +434,7 @@ public class TFTP {
 	*
 	* @return Request of the packet.
 	*/
-	public static Request parseRQ(DatagramPacket p) throws IllegalArgumentException {
+	public static Request parseRQ(DatagramPacket p) {
 		Request.Type t;
 		String f, m;
 		int currentIndex = 0;
@@ -529,6 +560,10 @@ public class TFTP {
 		}
 		
 		return true;
+	}
+
+	public static boolean isValidPort(int port) { 
+		return port >= MIN_PORT && port <= MAX_PORT;
 	}
 
 }
