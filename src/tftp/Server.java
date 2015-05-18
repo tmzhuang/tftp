@@ -41,7 +41,6 @@ public class Server implements Exitable {
 		} while (!TFTP.isDirectory(directory));
 		System.out.println("The directory you entered is: " + directory);
 
-		// TODO (Brandon): Look for fix to closing Scanner closes System.in
 		(new Thread(new Repl(this, in))).start();
 		(new Thread(new Listener())).start();
 	}
@@ -84,7 +83,7 @@ public class Server implements Exitable {
 		 */
 		public void run() {
 			Request r = TFTP.parseRQ(initialPacket);
-			System.out.println(r.getType() + " request for file \"" + directory + r.getFileName() + "\".");
+			System.out.println(r.getType() + " request for file \"" + directory + r.getFileName() + "\".\n");
 
 			switch (r.getType()) {
 				case READ:
@@ -215,7 +214,7 @@ public class Server implements Exitable {
 					System.out.println(e.getMessage());
 				}
 			}
-			System.out.println("End of file transfer.\n");
+			System.out.println("\nEnd of file transfer.\n");
 		}
 
 		/**
@@ -307,7 +306,7 @@ public class Server implements Exitable {
 				} while (TFTP.getData(receivePacket).length == TFTP.MAX_DATA_SIZE);
 				// Write data to file
 				TFTP.writeBytesToFile(directory + r.getFileName(), fileBytes);
-				if (verbose) System.out.println("Write complete.");
+				if (verbose) System.out.println("\nWrite complete.\n");
 			} catch(Exception e) {
 				System.out.println(e.getMessage());
 			}

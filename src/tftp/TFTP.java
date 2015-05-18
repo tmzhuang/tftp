@@ -5,6 +5,7 @@ import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.io.*;
 
@@ -123,7 +124,11 @@ public class TFTP {
 			// Close stream
 			in.close();
 			// If the file is a multiple of 512, add a 0-byte data packet
-			if (lastn == MAX_DATA_SIZE) packetQueue.add(formDATAPacket(addr, port, blockNumber, new byte[0]));
+			if (lastn == MAX_DATA_SIZE) {
+				packetQueue.add(formDATAPacket(addr, port, blockNumber, new byte[0]));
+			} else if (packetQueue.isEmpty()) {
+				packetQueue.add(formDATAPacket(addr, port, blockNumber, new byte[0]));
+			}
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			throw e;
@@ -513,6 +518,13 @@ public class TFTP {
 	public static boolean isDirectory(String filePath) {
 		File file = new File(filePath);
 		return file.isDirectory();
+	}
+	
+	public static boolean isPathless(String filePath)
+	{
+		Path path = Paths.get(filePath);
+		// The file is pathless is the file name is the same as the file path
+		return path.getFileName().toString().equals(filePath);
 	}
 	
 	public static long getFreeSpaceOnFileSystem(String filePath) {

@@ -50,7 +50,7 @@ public class Client implements Exitable {
 	 */
 	public void write(InetAddress addr, String filePath, String mode) {
 		// Make request packet and send
-		if (verbose) System.out.println("Sending WRITE request");
+		if (verbose) System.out.println("Sending WRITE request\n");
 		Request r = new Request(Request.Type.WRITE, filePath, mode);
 		DatagramPacket requestPacket = TFTP.formRQPacket(addr, SEND_PORT, r);
 		try {
@@ -70,7 +70,6 @@ public class Client implements Exitable {
 			if (verbose) System.out.println("Waiting for ACK0...");
 			sendReceiveSocket.receive(receivePacket);
 
-			// TODO (Brandon)
 			switch (TFTP.getOpCode(receivePacket)) {
 			case TFTP.ACK_OP_CODE:
 				// Throw exception if unexpected block number
@@ -165,7 +164,7 @@ public class Client implements Exitable {
 		try {
 			// Form request and send to server
 			Request r = new Request(Request.Type.READ,filePath,mode);
-			if (verbose) System.out.println("Sending a READ request to server for file \"" + r.getFileName() + "\".");
+			if (verbose) System.out.println("Sending a READ request to server for file \"" + r.getFileName() + "\".\n");
 			DatagramPacket requestPacket = TFTP.formRQPacket(addr, SEND_PORT, r);
 			DatagramPacket dataPacket;
 			// Send the request
@@ -204,11 +203,15 @@ public class Client implements Exitable {
 
 				if (verbose) System.out.println("DATA" + TFTP.getBlockNumber(dataPacket) + " received.");
 				if (verbose) System.out.println("The size of the data was " + TFTP.getData(dataPacket).length + ".");
+				
+				// Test output... DELETE later
+				System.out.println("free space = " + TFTP.getFreeSpaceOnFileSystem(directory));
 
 				// Write data to file
 				if (verbose) System.out.println("Appending current block to filebytes.");
 				fileBytes = TFTP.appendData(dataPacket, fileBytes);
-				if (fileBytes.length > TFTP.getFreeSpaceOnFileSystem(filePath)) {
+				//if ((fileBytes.length*TFTP.MAX_DATA_SIZE) > TFTP.getFreeSpaceOnFileSystem(filePath)) {
+				if ((fileBytes.length*TFTP.MAX_DATA_SIZE) > TFTP.getFreeSpaceOnFileSystem(directory)) {
 					// Creates a "file not found" error packet
 					DatagramPacket errorPacket = TFTP.formERRORPacket(
 							replyAddr,
@@ -297,8 +300,14 @@ public class Client implements Exitable {
 			}
 
 			// Get file name
-			System.out.println("Please enter the name of the file to transfer:");
-			fileName = in.next();
+			do {
+				System.out.println("Please enter the name of the file to transfer:");
+				fileName = in.next();
+				if (!TFTP.isPathless(fileName))
+				{
+					System.out.println("File names must not contain a path. The directory that you designated for transfer is: " + directory);
+				}
+			} while (!TFTP.isPathless(fileName));
 			filePath = directory + fileName;
 			
 			// Check if the file exists and file readable on client if WRITE request, otherwise continue loop
