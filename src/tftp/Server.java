@@ -22,6 +22,7 @@ public class Server implements Exitable {
 	 * Constructor of the Server class
 	 */
 	public Server() {
+		// No initialization needed
 	}
 
 	/**
@@ -179,9 +180,7 @@ public class Server implements Exitable {
 				// Wait for ACK
 				try {
 					// ACK should be set size
-					//int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE;
-					int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
-					byte[] buf = new byte[bufferSize];
+					byte[] buf = new byte[TFTP.MAX_PACKET_SIZE];
 					// Get a packet from client
 					DatagramPacket receivePacket = new DatagramPacket(buf,buf.length);
 					if (verbose) System.out.println("Waiting for ACK" + currentBlockNumber + "...");
@@ -193,7 +192,7 @@ public class Server implements Exitable {
 					if (!receivePacket.getAddress().equals(replyAddr)) System.out.println("Wrong address.");
 					if (receivePacket.getPort() != TID) System.out.println("Wrong port.");
 					if (!receivePacket.getAddress().equals(replyAddr) || receivePacket.getPort() != TID) 
-						throw new Exception("Packet recevied from invalid sender.");
+						throw new Exception("Packet received from invalid sender.");
 
 					switch (TFTP.getOpCode(receivePacket)) {
 						case TFTP.ACK_OP_CODE:
@@ -226,14 +225,12 @@ public class Server implements Exitable {
 			try {
 				String fileName = r.getFileName();
 				String filePath = directory + fileName;
-				int maxPacketLen = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
 				int currentBlockNumber = 1;
 				DatagramPacket receivePacket;
 				byte[] fileBytes = new byte[0];
 
 				// There is an error if the file exists and it not writable
-				if (TFTP.fileExists(filePath) && !TFTP.isWritable(filePath))
-				{
+				if (TFTP.fileExists(filePath) && !TFTP.isWritable(filePath)) {
 					// Creates a "access violation" error packet
 					DatagramPacket errorPacket = TFTP.formERRORPacket(
 							replyAddr,
@@ -260,7 +257,7 @@ public class Server implements Exitable {
 				do {
 					// Wait for a DATA packet
 					if (verbose) System.out.println("Waiting for DATA" + currentBlockNumber + "...");
-					byte[] buf = new byte[maxPacketLen];
+					byte[] buf = new byte[TFTP.MAX_PACKET_SIZE];
 					if (verbose) System.out.println("DATA" + currentBlockNumber + "received.");
 					receivePacket = new DatagramPacket(buf,buf.length);
 					socket.receive(receivePacket);
@@ -275,7 +272,7 @@ public class Server implements Exitable {
 
 					// Write the data packet to file
 					fileBytes = TFTP.appendData(receivePacket, fileBytes);
-					if (fileBytes.length > TFTP.getFreeSpaceOnFileSystem(filePath)) {
+					if ((fileBytes.length*TFTP.MAX_DATA_SIZE) > TFTP.getFreeSpaceOnFileSystem(directory)) {
 						// Creates a "file not found" error packet
 						DatagramPacket errorPacket = TFTP.formERRORPacket(
 								replyAddr,

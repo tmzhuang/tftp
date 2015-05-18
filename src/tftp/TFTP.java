@@ -23,6 +23,7 @@ public class TFTP {
 	public static final int OP_CODE_SIZE = 2;
 	public static final int BLOCK_NUMBER_SIZE = 2;
 	public static final int MAX_DATA_SIZE = 512;
+	public static final int MAX_PACKET_SIZE = 516;
 	public static final int READ_OP_CODE = 1;
 	public static final int WRITE_OP_CODE = 2;
 	public static final int DATA_OP_CODE = 3;
@@ -37,6 +38,15 @@ public class TFTP {
 	public static final int MAX_ERROR_CODE = 7;
 	public static final int MAX_OP_CODE = 5;
 	public static final int MAX_BLOCK_NUMBER = 65535;
+
+	public static DatagramPacket formPacket() {
+		byte[] data = new byte[MAX_PACKET_SIZE];
+		return new DatagramPacket(data, data.length);
+	}
+
+	public static DatagramPacket formPacket(InetAddress addr, int port, byte[] data) {
+		return new DatagramPacket(data, data.length, addr, port);
+	}
 	
 	/**
 	 * Forms a DatagramPacket using Request r with information about request type
@@ -579,4 +589,53 @@ public class TFTP {
 		return port >= MIN_PORT && port <= MAX_PORT;
 	}
 
+	// Truncates data buffer to fit data length of received packet
+	public static void shrinkData(DatagramPacket packet) {
+		int dataLength = packet.getLength();
+		byte data[] = new byte[dataLength];
+		System.arraycopy(packet.getData(), 0, data, 0, dataLength);
+		packet.setData(data);
+	}
+
+	public static void printPacket(DatagramPacket packet) {
+		int operation = getOpCode(packet);
+		System.out.println("===== Packet Info =====");
+		System.out.println("Port = " + packet.getPort());
+		System.out.println("Type = " + opCodeToString(operation));
+		switch(operation) {
+			case READ_OP_CODE:
+			case WRITE_OP_CODE:
+				System.out.println("File name = " + parseRQ(packet).getFileName());
+				System.out.println("Mode = " + parseRQ(packet).getMode());
+				break;
+			case DATA_OP_CODE:
+			case ACK_OP_CODE:
+				System.out.println("Block # = " + getBlockNumber(packet));
+				break;
+			case ERROR_OP_CODE:
+				System.out.println("Error message = " + getErrorMessage(packet));
+				break;
+			default:
+				throw new UnsupportedOperationException();
+		}
+		System.out.println("Data = " + Arrays.toString(packet.getData()) + "\n");
+	}
+
+	// Converts the OPCODE to it's string representation
+	private static String opCodeToString(int operation) {
+		switch(operation) {
+			case READ_OP_CODE:
+				return "Read";
+			case WRITE_OP_CODE:
+				return "Write";
+			case DATA_OP_CODE:
+				return "Data";
+			case ACK_OP_CODE:
+				return "ACK";
+			case ERROR_OP_CODE:
+				return "ERROR";
+			default:
+				throw new UnsupportedOperationException();
+		}
+	}
 }

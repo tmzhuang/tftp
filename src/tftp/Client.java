@@ -15,8 +15,8 @@ public class Client implements Exitable {
 	private boolean verbose = true;
 	//private static int SEND_PORT = 68;
 	//private static int SEND_PORT = 69;
-	//private static int SEND_PORT = 32001;
-	private static int SEND_PORT = 32002;
+	private static int SEND_PORT = 32001;
+	//private static int SEND_PORT = 32002;
 	private InetAddress replyAddr;
 	private int TID;
 	private String directory;
@@ -63,8 +63,7 @@ public class Client implements Exitable {
 		// Wait for ACK0
 		try {
 			// ACK should be set size
-			int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
-			byte[] buf = new byte[bufferSize];
+			byte[] buf = new byte[TFTP.MAX_PACKET_SIZE];
 			// Get a packet from server
 			DatagramPacket receivePacket = new DatagramPacket(buf,buf.length);
 			if (verbose) System.out.println("Waiting for ACK0...");
@@ -116,9 +115,7 @@ public class Client implements Exitable {
 			// Wait for ACK
 			try {
 				// ACK should be set size
-				//int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE;
-				int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
-				byte[] buf = new byte[bufferSize];
+				byte[] buf = new byte[TFTP.MAX_PACKET_SIZE];
 				// Get a packet from server
 				DatagramPacket receivePacket = new DatagramPacket(buf,buf.length);
 				if (verbose) System.out.println("Waiting for ACK" + currentBlockNumber + "...");
@@ -174,8 +171,7 @@ public class Client implements Exitable {
 			byte[] fileBytes = new byte[0];
 			do {
 				// Make packet to receive DATA
-				int bufferSize = TFTP.OP_CODE_SIZE + TFTP.BLOCK_NUMBER_SIZE + TFTP.MAX_DATA_SIZE;
-				byte[] buf = new byte[bufferSize];
+				byte[] buf = new byte[TFTP.MAX_PACKET_SIZE];
 				dataPacket = new DatagramPacket(buf, buf.length);
 
 				// Wait for DATA from server
@@ -210,7 +206,6 @@ public class Client implements Exitable {
 				// Write data to file
 				if (verbose) System.out.println("Appending current block to filebytes.");
 				fileBytes = TFTP.appendData(dataPacket, fileBytes);
-				//if ((fileBytes.length*TFTP.MAX_DATA_SIZE) > TFTP.getFreeSpaceOnFileSystem(filePath)) {
 				if ((fileBytes.length*TFTP.MAX_DATA_SIZE) > TFTP.getFreeSpaceOnFileSystem(directory)) {
 					// Creates a "file not found" error packet
 					DatagramPacket errorPacket = TFTP.formERRORPacket(
@@ -245,7 +240,7 @@ public class Client implements Exitable {
 			} while (TFTP.getData(dataPacket).length == TFTP.MAX_DATA_SIZE);
 			if (verbose) System.out.println("Writing bytes to file...");
 			TFTP.writeBytesToFile(filePath, fileBytes);
-			if (verbose) System.out.println("Read complete.");
+			if (verbose) System.out.println("Read complete.\n");
 		}
 		catch(Exception e) {
 			e.printStackTrace();
