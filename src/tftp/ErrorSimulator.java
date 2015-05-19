@@ -135,6 +135,9 @@ public class ErrorSimulator {
 
 				// Flag set when transfer is finished
 				boolean transferComplete = false;
+				
+				// Flag set when error packet is received
+				boolean errorPacketReceived = false;
 
 				// Flag indicating first loop iteration (for setting up TID)
 				boolean firstIteration = true;
@@ -147,7 +150,11 @@ public class ErrorSimulator {
 						// Receives data packet from server
 						sendReceiveServerSocket.receive(dataPacket);
 
-						// TODO (Brandon): Transfer is complete if server sends back an error packet
+						// Transfer is complete if server sends back an error packet
+						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE) {
+							errorPacketReceived = true;
+						}
+
 						// Transfer is complete if data block is less than MAX_DATA_SIZE
 						if (dataPacket.getLength() < TFTP.MAX_PACKET_SIZE) {
 							transferComplete = true;
@@ -168,6 +175,12 @@ public class ErrorSimulator {
 								dataPacket.getData());
 						TFTP.printPacket(forwardedDataPacket);
 						sendReceiveClientSocket.send(forwardedDataPacket);
+						
+						// End transfer if last packet received was an error packet
+						if (errorPacketReceived) {
+							transferComplete = true;
+							break;
+						}
 
 						// Creates a DatagramPacket to receive acknowledgement packet from client
 						DatagramPacket ackPacket = TFTP.formPacket();
@@ -184,6 +197,13 @@ public class ErrorSimulator {
 								ackPacket.getData());
 						TFTP.printPacket(forwardedAckPacket);
 						sendReceiveServerSocket.send(forwardedAckPacket);
+
+						// Transfer is complete if server sends back an error packet
+						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE) {
+							errorPacketReceived = true;
+							transferComplete = true;
+							break;
+						}
 					}
 					System.out.println("Connection terminated.\n");
 				} finally {
@@ -232,6 +252,11 @@ public class ErrorSimulator {
 				TFTP.shrinkData(firstAckPacket);
 				TFTP.printPacket(firstAckPacket);
 
+				// End transfer if last packet received was an error packet
+				if (TFTP.getOpCode(firstAckPacket) == TFTP.ERROR_OP_CODE) {
+					System.out.println("Connection terminated.\n");
+				}
+
 				// Saves the client TID
 				int clientTID = clientRequestPacket.getPort();
 
@@ -245,6 +270,11 @@ public class ErrorSimulator {
 						firstAckPacket.getData());
 				TFTP.printPacket(forwardedFirstAckPacket);
 				sendReceiveClientSocket.send(forwardedFirstAckPacket);
+
+				// Transfer is complete if server sends back an error packet
+				if (TFTP.getOpCode(firstAckPacket) == TFTP.ERROR_OP_CODE) {
+					System.out.println("Connection terminated.\n");
+				}
 
 				// Flag set when transfer is finished
 				boolean transferComplete = false;
@@ -287,6 +317,12 @@ public class ErrorSimulator {
 								ackPacket.getData());
 						TFTP.printPacket(forwardedAckPacket);
 						sendReceiveClientSocket.send(forwardedAckPacket);
+
+						// Transfer is complete if server sends back an error packet
+						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE) {
+							transferComplete = true;
+							break;
+						}
 					}
 					System.out.println("Connection terminated.\n");
 				} finally {
@@ -299,109 +335,3 @@ public class ErrorSimulator {
 		}
 	}
 }
-
-/*import java.net.*;
-import java.util.*;
-
-public class ErrorSimulator {
-	private DatagramSocket receiveSocket, sendReceiveSocket;
-	//private static int RECEIVE_PORT = 4;
-	//private static int SEND_PORT = 69;
-	private static int RECEIVE_PORT = 32001;
-	private static int SEND_PORT = 32002;
-	private static int BUF_SIZE = 100;
-	private boolean verbose = true;
-
-	public ErrorSimulator() {
-		try {
-			receiveSocket = new DatagramSocket(RECEIVE_PORT);
-			sendReceiveSocket = new DatagramSocket();
-		} catch(Exception e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
-	}
-
-	// Listens to client until a packet is received and relays the packet
-	// to server. Then waits for response from server and relays the response
-	// back to the client.
-	public void listen() {
-		InetAddress clientAddr = null;
-		int clientPort = -1;
-
-		// Receive packet from client
-		if (verbose) System.out.println("Waiting for client...");
-		byte[] buf = new byte[BUF_SIZE];
-		DatagramPacket receivePacket = new DatagramPacket(buf, buf.length);
-
-		try {
-			receiveSocket.receive(receivePacket);
-			if (verbose) {
-				System.out.println("Packet from client received.");
-				System.out.print("Request: ");
-				System.out.println(new String(receivePacket.getData()));
-				System.out.println("Length of packet received is: " + receivePacket.getLength());
-			}
-			clientAddr = receivePacket.getAddress();
-			clientPort = receivePacket.getPort();
-			
-		} catch(Exception e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
-
-		// Create packet to send to server
-		try {
-			// Truncate received packet to received length
-			byte[] data = new byte[receivePacket.getLength()];
-			System.arraycopy(buf,0,data,0,receivePacket.getLength());
-			System.out.println(Arrays.toString(data));
-			DatagramPacket sendPacket = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), SEND_PORT);
-		// Send packet to server
-			if (verbose) System.out.println("Sending packet to server");
-			sendReceiveSocket.send(sendPacket);
-			
-		} catch(Exception e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
-
-		// Wait for response from server
-		try {
-			buf = new byte[BUF_SIZE];
-			receivePacket = new DatagramPacket(buf, buf.length);
-			if (verbose) System.out.println("Waiting for server...");
-			sendReceiveSocket.receive(receivePacket);
-			if (verbose) {
-				System.out.println("Packet from server received.");
-				System.out.print("Request: ");
-				System.out.println(new String(receivePacket.getData()));
-			}
-		} catch(Exception e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
-
-		// Create packet to send back to back to client
-		try {
-			DatagramPacket sendPacket = new DatagramPacket(buf, buf.length, clientAddr, clientPort);
-			DatagramSocket tmpSocket = new DatagramSocket();
-			if (verbose) {
-				System.out.println("Sending packet to client");
-				System.out.print("Request: ");
-				System.out.println(new String(sendPacket.getData()));
-				System.out.println();
-			}
-			tmpSocket.send(sendPacket);
-			tmpSocket.close();
-		} catch(Exception e) {
-		}
-	}
-
-	public static void main (String[] args) {
-		ErrorSimulator ihost = new ErrorSimulator();
-		while (true) {
-			ihost.listen();
-		}
-	}
-}*/

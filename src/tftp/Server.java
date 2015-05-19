@@ -40,7 +40,7 @@ public class Server implements Exitable {
 				System.out.println("Directory does not exist.");
 			}
 		} while (!TFTP.isDirectory(directory));
-		System.out.println("The directory you entered is: " + directory);
+		System.out.println("The directory you entered is: " + directory + "\n");
 
 		(new Thread(new Repl(this, in))).start();
 		(new Thread(new Listener())).start();
@@ -179,10 +179,8 @@ public class Server implements Exitable {
 
 				// Wait for ACK
 				try {
-					// ACK should be set size
-					byte[] buf = new byte[TFTP.MAX_PACKET_SIZE];
 					// Get a packet from client
-					DatagramPacket receivePacket = new DatagramPacket(buf,buf.length);
+					DatagramPacket receivePacket = TFTP.formPacket();
 					if (verbose) System.out.println("Waiting for ACK" + currentBlockNumber + "...");
 					socket.receive(receivePacket);
 
@@ -257,9 +255,7 @@ public class Server implements Exitable {
 				do {
 					// Wait for a DATA packet
 					if (verbose) System.out.println("Waiting for DATA" + currentBlockNumber + "...");
-					byte[] buf = new byte[TFTP.MAX_PACKET_SIZE];
-					if (verbose) System.out.println("DATA" + currentBlockNumber + "received.");
-					receivePacket = new DatagramPacket(buf,buf.length);
+					receivePacket = TFTP.formPacket();
 					socket.receive(receivePacket);
 
 					// Throw exception if wrong OP code
@@ -269,6 +265,9 @@ public class Server implements Exitable {
 					// Throw exception if unexpected block number
 					if (TFTP.getBlockNumber(receivePacket) != currentBlockNumber)
 						throw new Exception("DATA packet received has an unexpected block number.");
+
+					// Echo successful data receive
+					if (verbose) System.out.println("DATA" + currentBlockNumber + "received.");
 
 					// Write the data packet to file
 					fileBytes = TFTP.appendData(receivePacket, fileBytes);
