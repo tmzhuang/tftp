@@ -13,9 +13,9 @@ import java.util.*;
 public class Client implements Exitable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
-	//private static int SEND_PORT = 68;
+	private static int SEND_PORT = 68;
 	//private static int SEND_PORT = 69;
-	private static int SEND_PORT = 32001;
+	//private static int SEND_PORT = 32001;
 	//private static int SEND_PORT = 32002;
 	private InetAddress replyAddr;
 	private int TID;
@@ -212,7 +212,7 @@ public class Client implements Exitable {
 					}
 
 					// Echo error message
-					if (verbose) System.err.println("Disk full. Aborting transfer...\n");
+					if (verbose) System.out.println("Disk full. Aborting transfer...\n");
 
 					// Closes socket and aborts thread
 					return;
@@ -248,21 +248,25 @@ public class Client implements Exitable {
 		Request.Type t = null;
 		String fileName;
 		String filePath;
+		boolean badDirectory;
 		
 		// Sets the directory for the client
 		do {
-			System.out.println("Please enter the directory that you want to use for the client files:");
+			badDirectory = false;
+			System.out.println("Please enter the directory that you want to use for the server files:");
 			System.out.println("Must end with either a '/' or a '\\' to work");
 			directory = in.next();
+			char lastChar = directory.charAt(directory.length()-1);
 			if (!TFTP.isDirectory(directory)) {
 				System.out.println("Directory does not exist.");
-				continue;
+				badDirectory = true;
 			}
-			/*else if (TFTP.testDirectory(directory))
+			else if (lastChar != '/' && lastChar != '\\')
 			{
-				
-			}*/
-		} while (!TFTP.isDirectory(directory));
+				System.out.println("Directory must end with either a '/' or a '\\'");
+				badDirectory = true;
+			}
+		} while (badDirectory);
 		System.out.println("The directory you entered is: " + directory + "\n");
 
 		while (true) {
@@ -304,7 +308,7 @@ public class Client implements Exitable {
 				if (TFTP.fileExists(filePath) && !TFTP.isDirectory(filePath)) {
 					if (!TFTP.isReadable(filePath)) {
 						// Echo error message for access violation
-						System.err.println("File access violation.\n");
+						System.out.println("File access violation.\n");
 						continue;
 					} else {
 						// Echo successful file found
@@ -312,14 +316,14 @@ public class Client implements Exitable {
 					}
 				} else {
 					// Echo error message for file not found
-					System.err.println("File not found.\n");
+					System.out.println("File not found.\n");
 					continue;
 				}
 			// For read requests, check if file already exists on the client
 			} else if (t == Request.Type.READ) {
 				if (TFTP.fileExists(filePath) && !TFTP.isDirectory(filePath)) {
 					// Echo error message
-					System.err.println("File already exists.\n");
+					System.out.println("File already exists.\n");
 					continue;
 				} else {
 					// Prints empty line

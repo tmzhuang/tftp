@@ -613,13 +613,13 @@ public class TFTP {
 		try {
 			Files.delete(path);
 		} catch (NoSuchFileException e) {
-			System.err.println("No such file or directory");
+			System.out.println("No such file or directory");
 			return false;
 		} catch (DirectoryNotEmptyException e) {
-			System.err.println("Directory not empty");
+			System.out.println("Directory not empty");
 			return false;
 		} catch (IOException e) {
-			System.err.println("Something went wrong here");
+			System.out.println("Something went wrong here");
 			return false;
 		}
 		

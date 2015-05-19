@@ -8,10 +8,10 @@ public class ErrorSimulator {
 	 * Fields
 	 */
 	private DatagramSocket receiveSocket;
-	//private static int RECEIVE_PORT = 4;
-	//private static int SEND_PORT = 69;
-	private static int RECEIVE_PORT = 32001;
-	private static int SEND_PORT = 32002;
+	private static int RECEIVE_PORT = 68;
+	private static int SEND_PORT = 69;
+	//private static int RECEIVE_PORT = 32001;
+	//private static int SEND_PORT = 32002;
 
 	/**
 	 * Class constructor

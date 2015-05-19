@@ -11,8 +11,8 @@ import java.util.*;
  * @version Iteration 1
  */
 public class Server implements Exitable {
-	//private static int RECEIVE_PORT = 69;
-	private static int RECEIVE_PORT = 32002;
+	private static int RECEIVE_PORT = 69;
+	//private static int RECEIVE_PORT = 32002;
 	private static int BUF_SIZE = 100; // Default buffer size for packet data
 	private boolean verbose = true;
 	private boolean running = true;
@@ -30,16 +30,25 @@ public class Server implements Exitable {
 	 */
 	public void run() {
 		Scanner in = new Scanner(System.in);
+		boolean badDirectory;
 
 		// Sets the directory for the server
 		do {
+			badDirectory = false;
 			System.out.println("Please enter the directory that you want to use for the server files:");
 			System.out.println("Must end with either a '/' or a '\\' to work");
 			directory = in.next();
+			char lastChar = directory.charAt(directory.length()-1);
 			if (!TFTP.isDirectory(directory)) {
 				System.out.println("Directory does not exist.");
+				badDirectory = true;
 			}
-		} while (!TFTP.isDirectory(directory));
+			else if (lastChar != '/' && lastChar != '\\')
+			{
+				System.out.println("Directory must end with either a '/' or a '\\'");
+				badDirectory = true;
+			}
+		} while (badDirectory);
 		System.out.println("The directory you entered is: " + directory + "\n");
 
 		(new Thread(new Repl(this, in))).start();
@@ -123,7 +132,7 @@ public class Server implements Exitable {
 				}
 
 				// Echo error message
-				if (verbose) System.err.println("File does not exist. Aborting transfer...\n");
+				if (verbose) System.out.println("File does not exist. Aborting transfer...\n");
 
 				// Closes socket and aborts thread
 				socket.close();
@@ -148,7 +157,7 @@ public class Server implements Exitable {
 				}
 
 				// Echo error message
-				System.err.println("File access violation. Aborting transfer...\n");
+				System.out.println("File access violation. Aborting transfer...\n");
 
 				// Closes socket and aborts thread
 				socket.close();
@@ -240,7 +249,7 @@ public class Server implements Exitable {
 					socket.send(errorPacket);
 
 					// Echo error message
-					if (verbose) System.err.println("File access violation. Aborting transfer...\n");
+					if (verbose) System.out.println("File access violation. Aborting transfer...\n");
 					
 					// Closes socket and aborts thread
 					socket.close();
@@ -286,7 +295,7 @@ public class Server implements Exitable {
 						}
 
 						// Echo error message
-						if (verbose) System.err.println("Disk full. Aborting transfer...\n");
+						if (verbose) System.out.println("Disk full. Aborting transfer...\n");
 
 						// Closes socket and aborts thread
 						socket.close();
