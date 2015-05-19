@@ -18,35 +18,47 @@ import java.io.*;
  * @version Iteration 1
  */
 public class TFTP {
-	// OP CODES
-	public static final int READ_OP_CODE = 1;
-	public static final int WRITE_OP_CODE = 2;
-	public static final int DATA_OP_CODE = 3;
-	public static final int ACK_OP_CODE = 4;
-	public static final int ERROR_OP_CODE = 5;
-	// ERROR CODES
-	public static final int ERROR_CODE_FILE_NOT_FOUND = 1;
-	public static final int ERROR_CODE_ACCESS_VIOLATION = 2;
-	public static final int ERROR_CODE_DISK_FULL = 3;
-	// MISC
 	public static final int BUF_SIZE = 100;
 	public static final int TFTP_PADDING = 0;
 	public static final int OP_CODE_SIZE = 2;
 	public static final int BLOCK_NUMBER_SIZE = 2;
 	public static final int MAX_DATA_SIZE = 512;
+	public static final int MAX_PACKET_SIZE = 516;
+	public static final int READ_OP_CODE = 1;
+	public static final int WRITE_OP_CODE = 2;
+	public static final int DATA_OP_CODE = 3;
+	public static final int ACK_OP_CODE = 4;
+	public static final int ERROR_OP_CODE = 5;
 	public static final int ERROR_CODE_SIZE = 2;
+	public static final int ERROR_CODE_FILE_NOT_FOUND = 1;
+	public static final int ERROR_CODE_ACCESS_VIOLATION = 2;
+	public static final int ERROR_CODE_DISK_FULL = 3;
 	public static final int MIN_PORT = 1;
 	public static final int MAX_PORT = 65535;
 	public static final int MAX_ERROR_CODE = 7;
 	public static final int MAX_OP_CODE = 5;
 	public static final int MAX_BLOCK_NUMBER = 65535;
-	public static final int MAX_PACKET_SIZE = OP_CODE_SIZE + BLOCK_NUMBER_SIZE + MAX_DATA_SIZE;
 
+	/**
+	 * Forms a DatagramPacket with an empty data buffer large enough to hold the maximum
+	 * packet size
+	 *
+	 * @return DatagramPacket with an empty data buffer of size MAX_PACKET_SIZE
+	 */
 	public static DatagramPacket formPacket() {
 		byte[] data = new byte[MAX_PACKET_SIZE];
 		return new DatagramPacket(data, data.length);
 	}
 
+	/**
+	 * Forms a DatagramPacket with the byte[] data passed in
+	 *
+	 * @param addr InetAddress of packet destination
+	 * @param port Port number of packet destination
+	 * @param data byte[] to use as the packet payload
+	 * 
+	 * @return Datagram packet for specified address and port with given request
+	 */
 	public static DatagramPacket formPacket(InetAddress addr, int port, byte[] data) {
 		return new DatagramPacket(data, data.length, addr, port);
 	}
@@ -212,12 +224,15 @@ public class TFTP {
 		return opCode;
 	}
 
+	/**
+	 * Checks the validity of the op code opCode supplied
+	 *
+	 * @param opCode int representing the op code to be tested
+	 *
+	 * @return boolean telling if the op code is valid
+	 */
 	public static boolean isValidOpCode(int opCode) {
 		return opCode >= 1 && opCode <= 5;
-	}
-
-	public static boolean isValidBlockNumber(int blockNumber) {
-		return blockNumber>=0 && blockNumber<=MAX_BLOCK_NUMBER;
 	}
 
 	/**
@@ -248,6 +263,17 @@ public class TFTP {
 	}
 
 	/**
+	 * Checks the validity of the block number blockNumber supplied
+	 *
+	 * @param opCode int representing the block number to be tested
+	 *
+	 * @return boolean telling if the block number is valid
+	 */
+	public static boolean isValidBlockNumber(int blockNumber) {
+		return blockNumber>=0 && blockNumber<=MAX_BLOCK_NUMBER;
+	}
+
+	/**
 	 * Given a TFTP DATA packet, returns the data portion of the TFTP packet 
 	 * as a byte array.
 	 *
@@ -274,10 +300,13 @@ public class TFTP {
 		return data;
 	}
 
-	public static boolean isValidErrorCode(int errorCode) {
-		return errorCode>=0 && errorCode<=MAX_ERROR_CODE;
-	}
-
+	/**
+	 * Gets TODO(Brandon)
+	 *
+	 * @param packet A TFTP DATA packet
+	 *
+	 * @return The data portion of a DATA packet as a byte array
+	 */
 	public static String getErrorMessage(DatagramPacket packet) {
 		//If packet isn't an error, throw exception
 		if(getOpCode(packet) != ERROR_OP_CODE) throw new IllegalArgumentException();
@@ -306,6 +335,16 @@ public class TFTP {
 		return errorCode;
 	}
 
+	/**
+	 * Checks the validity of the error code errorCode supplied
+	 *
+	 * @param opCode int representing the error code to be tested
+	 *
+	 * @return boolean telling if the error code is valid
+	 */
+	public static boolean isValidErrorCode(int errorCode) {
+		return errorCode>=0 && errorCode<=MAX_ERROR_CODE;
+	}
 
 	/**
 	 * Give a block number and a byte array of data, creates a datagram packet for the
@@ -413,10 +452,6 @@ public class TFTP {
 	 * @return ERROR packet formed with given inputs
 	 */
 	public static DatagramPacket formERRORPacket(InetAddress addr, int port, int errorCode, String errMsg) {
-		// Check args
-		if (!isValidPort(port)) throw new IllegalArgumentException(); 
-		if (!isValidErrorCode(errorCode)) throw new IllegalArgumentException();
-
 		///////////////////////////////
 		// 4+data.length because 2 bytes for op code and 2 bytes for blockNumber
 		byte[] sbytes = errMsg.getBytes();
@@ -426,6 +461,7 @@ public class TFTP {
 		buf[0] = 0;
 		buf[1] = ERROR_OP_CODE;
 
+		// Block number
 		// Block number
 		try {
 			byte[] blockNumberBytes = blockNumberToBytes(errorCode);

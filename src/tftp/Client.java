@@ -256,7 +256,12 @@ public class Client implements Exitable {
 			directory = in.next();
 			if (!TFTP.isDirectory(directory)) {
 				System.out.println("Directory does not exist.");
+				continue;
 			}
+			/*else if (TFTP.testDirectory(directory))
+			{
+				
+			}*/
 		} while (!TFTP.isDirectory(directory));
 		System.out.println("The directory you entered is: " + directory + "\n");
 

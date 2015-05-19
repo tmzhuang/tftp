@@ -88,7 +88,7 @@ public class TFTPTest {
 	//File does not exist
 	//Expects exception thrown
 	@Test (expected = FileNotFoundException.class)
-	public void formDATAPacketsTest1() {
+	public void formDATAPacketsTest1() throws Exception {
 		// Setup
 		//exception.expect(FileNotFoundException.class);
 		try {
@@ -98,7 +98,7 @@ public class TFTPTest {
 
 			Queue<DatagramPacket> dataPackets = TFTP.formDATAPackets(addr, port, filename);
 		} catch(Exception e) {
-			e.printStackTrace();
+			throw e;
 		}
 	}
 
@@ -120,8 +120,10 @@ public class TFTPTest {
 			Queue<DatagramPacket> dataPackets = TFTP.formDATAPackets(addr, port, filename);
 
 			// Check that queue is empty
-			System.out.println("size of packet queue " + dataPackets.size());
-			assertTrue(dataPackets.isEmpty());
+			assertTrue(dataPackets.size() == 1);
+			// Check that the packet is empty
+			DatagramPacket dataPacket = dataPackets.remove();
+			assertTrue(TFTP.getData(dataPacket).length == 0);
 
 			// Cleanup
 			f.delete();
