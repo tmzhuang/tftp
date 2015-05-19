@@ -18,26 +18,29 @@ import java.io.*;
  * @version Iteration 1
  */
 public class TFTP {
-	public static final int BUF_SIZE = 100;
-	public static final int TFTP_PADDING = 0;
-	public static final int OP_CODE_SIZE = 2;
-	public static final int BLOCK_NUMBER_SIZE = 2;
-	public static final int MAX_DATA_SIZE = 512;
-	public static final int MAX_PACKET_SIZE = 516;
+	// OP CODES
 	public static final int READ_OP_CODE = 1;
 	public static final int WRITE_OP_CODE = 2;
 	public static final int DATA_OP_CODE = 3;
 	public static final int ACK_OP_CODE = 4;
 	public static final int ERROR_OP_CODE = 5;
-	public static final int ERROR_CODE_SIZE = 2;
+	// ERROR CODES
 	public static final int ERROR_CODE_FILE_NOT_FOUND = 1;
 	public static final int ERROR_CODE_ACCESS_VIOLATION = 2;
 	public static final int ERROR_CODE_DISK_FULL = 3;
+	// MISC
+	public static final int BUF_SIZE = 100;
+	public static final int TFTP_PADDING = 0;
+	public static final int OP_CODE_SIZE = 2;
+	public static final int BLOCK_NUMBER_SIZE = 2;
+	public static final int MAX_DATA_SIZE = 512;
+	public static final int ERROR_CODE_SIZE = 2;
 	public static final int MIN_PORT = 1;
 	public static final int MAX_PORT = 65535;
 	public static final int MAX_ERROR_CODE = 7;
 	public static final int MAX_OP_CODE = 5;
 	public static final int MAX_BLOCK_NUMBER = 65535;
+	public static final int MAX_PACKET_SIZE = OP_CODE_SIZE + BLOCK_NUMBER_SIZE + MAX_DATA_SIZE;
 
 	public static DatagramPacket formPacket() {
 		byte[] data = new byte[MAX_PACKET_SIZE];
@@ -410,6 +413,10 @@ public class TFTP {
 	 * @return ERROR packet formed with given inputs
 	 */
 	public static DatagramPacket formERRORPacket(InetAddress addr, int port, int errorCode, String errMsg) {
+		// Check args
+		if (!isValidPort(port)) throw new IllegalArgumentException(); 
+		if (!isValidErrorCode(errorCode)) throw new IllegalArgumentException();
+
 		///////////////////////////////
 		// 4+data.length because 2 bytes for op code and 2 bytes for blockNumber
 		byte[] sbytes = errMsg.getBytes();
@@ -419,7 +426,6 @@ public class TFTP {
 		buf[0] = 0;
 		buf[1] = ERROR_OP_CODE;
 
-		// Block number
 		// Block number
 		try {
 			byte[] blockNumberBytes = blockNumberToBytes(errorCode);

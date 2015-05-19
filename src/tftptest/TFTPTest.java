@@ -15,9 +15,6 @@ import org.junit.rules.*;
 import tftp.*;
 
 public class TFTPTest {
-	@Rule
-	public ExpectedException exception = ExpectedException.none();
-
 	//public static DatagramPacket formRQPacket(InetAddress addr, int port, Request r)
 	@Test
 	public void formRQPacketTest1() {
@@ -90,10 +87,10 @@ public class TFTPTest {
 	//public static Queue<DatagramPacket> formDATAPackets(InetAddress addr, int port, String filename)
 	//File does not exist
 	//Expects exception thrown
-	//@Test (expected = FileNotFoundException.class)
+	@Test (expected = FileNotFoundException.class)
 	public void formDATAPacketsTest1() {
 		// Setup
-		exception.expect(FileNotFoundException.class);
+		//exception.expect(FileNotFoundException.class);
 		try {
 			InetAddress addr = InetAddress.getLocalHost();
 			int port = 69;
@@ -114,14 +111,16 @@ public class TFTPTest {
 		try {
 			InetAddress addr = InetAddress.getLocalHost();
 			int port = 69;
-			String filename = "formDATAPacketsTest2.txt";
 
+			String filename = "formDATAPacketsTest2.txt";
 			File f= new File(filename);
+			if (f.exists()) f.delete();
 			f.createNewFile();
 
 			Queue<DatagramPacket> dataPackets = TFTP.formDATAPackets(addr, port, filename);
 
 			// Check that queue is empty
+			System.out.println("size of packet queue " + dataPackets.size());
 			assertTrue(dataPackets.isEmpty());
 
 			// Cleanup
@@ -143,6 +142,7 @@ public class TFTPTest {
 			String filename = "formDATAPacketsTest3.txt";
 
 			File f= new File(filename);
+			if (f.exists()) f.delete();
 			f.createNewFile();
 
 			// Write 2*512 + 1 bytes to file
@@ -187,6 +187,7 @@ public class TFTPTest {
 			String filename = "formDATAPacketsTest4.txt";
 
 			File f= new File(filename);
+			if (f.exists()) f.delete();
 			f.createNewFile();
 
 			// Write 2*512 + 1 bytes to file
@@ -223,8 +224,6 @@ public class TFTPTest {
 		} catch(Exception e) {
 		}
 	}
-
-	//public static void writeDATAToFile(DatagramPacket dataPacket, String filename)
 
 	//public static int getOpCode(DatagramPacket packet)
 	@Test
@@ -374,8 +373,6 @@ public class TFTPTest {
 		}
 	}
 
-	//public static DatagramPacket formERRORPacket(InetAddress addr, int port, int errorCode, String errMsg) {
-
 	//public static Request parseRQ(DatagramPacket p) throws IllegalArgumentException
 	@Test
 	public void parseRQTest1() {
@@ -424,25 +421,58 @@ public class TFTPTest {
 	}
 
 	//public static DatagramPacket formERRORPacket(InetAddress addr, int port, int errorCode, String errMsg) 
-	@Test
+	@Test 
 	public void formErrorPacketTest1() {
-		String filename = "formErrorPacketTest1.txt";
-		File f = new File(filename);
-		
-		// Test non-existent file
-		assertFalse(TFTP.fileExists(filename));
-
 		try {
-			// Test existent file
-			f.createNewFile();
-			assertTrue(TFTP.fileExists(filename));
+			InetAddress addr = InetAddress.getLocalHost();
+		int port = 69;
+		int errCode = 3;
+		String errMsg = "hi";
+		byte[] errMsgBytes = errMsg.getBytes();
+		byte[] expectedBytes = new byte[TFTP.OP_CODE_SIZE + TFTP.ERROR_CODE_SIZE + errMsgBytes.length + 1];
+		expectedBytes[0] = 0;
+		expectedBytes[1] = (byte)TFTP.ERROR_OP_CODE;
+		expectedBytes[2] = 0;
+		expectedBytes[3] = (byte)errCode;
+		System.arraycopy(errMsgBytes,0,expectedBytes,4,errMsgBytes.length);
+		expectedBytes[expectedBytes.length-1] = 0;
 
-			f.delete();
+
+		DatagramPacket formedPacket = TFTP.formERRORPacket(addr,port,errCode,errMsg);
+		// Check address of packet
+		assertTrue(formedPacket.getAddress().equals(addr));
+		// Check port of packet
+		assertTrue(formedPacket.getPort() == port);
+		// Check data of packet
+		byte[] formedBytes = formedPacket.getData();
+		assertTrue(Arrays.equals(formedBytes,expectedBytes));
+
 		} catch(Exception e) {
+			e.printStackTrace();
 		}
 	}
 
 	//public static String getErrorMessage(DatagramPacket packet)
+	@Test
+	public void getErrorMessageTest1() {
+		String msg = "sumting wong";
+		try {
+			DatagramPacket packet = TFTP.formERRORPacket(InetAddress.getLocalHost(),69,3,msg);
+			assertTrue(msg.equals(TFTP.getErrorMessage(packet)));
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
 	
 	//public static int getErrorCode(DatagramPacket packet)
+	@Test
+	public void getErrorCodeTest1() {
+		int code = 3;
+		try {
+			DatagramPacket packet = TFTP.formERRORPacket(InetAddress.getLocalHost(),69,code,"sumting wong");
+			assertTrue(code == TFTP.getErrorCode(packet));
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
 }
