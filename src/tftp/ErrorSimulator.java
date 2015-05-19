@@ -128,10 +128,12 @@ public class ErrorSimulator {
 				sendReceiveServerSocket.send(serverRequestPacket);
 
 				// Saves the client TID
-				int clientTID = clientRequestPacket.getPort();
+				InetAddress clientAddressTID = clientRequestPacket.getAddress();
+				int clientPortTID = clientRequestPacket.getPort();
 
 				// Transfer ID of the server
-				int serverTID = -1;
+				InetAddress serverAddressTID = null;
+				int serverPortTID = -1;
 
 				// Flag set when transfer is finished
 				boolean transferComplete = false;
@@ -164,14 +166,15 @@ public class ErrorSimulator {
 
 						// Saves server TID on first iteration
 						if (firstIteration) {
-							serverTID = dataPacket.getPort();
+							serverAddressTID = dataPacket.getAddress();
+							serverPortTID = dataPacket.getPort();
 							firstIteration = false;
 						}
 
 						// Sends data packet to client
 						DatagramPacket forwardedDataPacket = TFTP.formPacket(
-								InetAddress.getLocalHost(),
-								clientTID,
+								clientAddressTID,
+								clientPortTID,
 								dataPacket.getData());
 						TFTP.printPacket(forwardedDataPacket);
 						sendReceiveClientSocket.send(forwardedDataPacket);
@@ -192,8 +195,8 @@ public class ErrorSimulator {
 
 						// Sends acknowledgement packet to server
 						DatagramPacket forwardedAckPacket = TFTP.formPacket(
-								InetAddress.getLocalHost(),
-								serverTID,
+								serverAddressTID,
+								serverPortTID,
 								ackPacket.getData());
 						TFTP.printPacket(forwardedAckPacket);
 						sendReceiveServerSocket.send(forwardedAckPacket);
@@ -258,15 +261,17 @@ public class ErrorSimulator {
 				}
 
 				// Saves the client TID
-				int clientTID = clientRequestPacket.getPort();
+				InetAddress clientAddressTID = clientRequestPacket.getAddress();
+				int clientPortTID = clientRequestPacket.getPort();
 
 				// Saves the server TID
-				int serverTID = firstAckPacket.getPort();
+				InetAddress serverAddressTID = firstAckPacket.getAddress();
+				int serverPortTID = firstAckPacket.getPort();
 
 				// Sends acknowledgement packet to client
 				DatagramPacket forwardedFirstAckPacket = TFTP.formPacket(
-						InetAddress.getLocalHost(),
-						clientTID,
+						clientAddressTID,
+						clientPortTID,
 						firstAckPacket.getData());
 				TFTP.printPacket(forwardedFirstAckPacket);
 				sendReceiveClientSocket.send(forwardedFirstAckPacket);
@@ -296,8 +301,8 @@ public class ErrorSimulator {
 
 						// Sends data packet to server
 						DatagramPacket forwardedDataPacket = TFTP.formPacket(
-								InetAddress.getLocalHost(),
-								serverTID,
+								serverAddressTID,
+								serverPortTID,
 								dataPacket.getData());
 						TFTP.printPacket(forwardedDataPacket);
 						sendReceiveServerSocket.send(forwardedDataPacket);
@@ -312,8 +317,8 @@ public class ErrorSimulator {
 
 						// Sends acknowledgement packet to client
 						DatagramPacket forwardedAckPacket = TFTP.formPacket(
-								InetAddress.getLocalHost(),
-								clientTID,
+								clientAddressTID,
+								clientPortTID,
 								ackPacket.getData());
 						TFTP.printPacket(forwardedAckPacket);
 						sendReceiveClientSocket.send(forwardedAckPacket);
