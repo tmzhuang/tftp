@@ -25,10 +25,6 @@ public class Client implements Exitable {
 	 * Constructor for Client class, initialize a new socket upon called.
 	 */
 	public Client() {
-		//// Start repl for quitting client
-		//Thread repl = new Thread(new Repl(this));
-		//repl.start();
-
 		// Create data socket for communicating with server
 		try {
 			sendReceiveSocket = new DatagramSocket();
@@ -62,10 +58,8 @@ public class Client implements Exitable {
 
 		// Wait for ACK0
 		try {
-			// ACK should be set size
-			byte[] buf = new byte[TFTP.MAX_PACKET_SIZE];
 			// Get a packet from server
-			DatagramPacket receivePacket = new DatagramPacket(buf,buf.length);
+			DatagramPacket receivePacket = TFTP.formPacket();
 			if (verbose) System.out.println("Waiting for ACK0...");
 			sendReceiveSocket.receive(receivePacket);
 
@@ -114,10 +108,8 @@ public class Client implements Exitable {
 
 			// Wait for ACK
 			try {
-				// ACK should be set size
-				byte[] buf = new byte[TFTP.MAX_PACKET_SIZE];
 				// Get a packet from server
-				DatagramPacket receivePacket = new DatagramPacket(buf,buf.length);
+				DatagramPacket receivePacket = TFTP.formPacket();
 				if (verbose) System.out.println("Waiting for ACK" + currentBlockNumber + "...");
 				sendReceiveSocket.receive(receivePacket);
 
@@ -171,8 +163,7 @@ public class Client implements Exitable {
 			byte[] fileBytes = new byte[0];
 			do {
 				// Make packet to receive DATA
-				byte[] buf = new byte[TFTP.MAX_PACKET_SIZE];
-				dataPacket = new DatagramPacket(buf, buf.length);
+				dataPacket = TFTP.formPacket();
 
 				// Wait for DATA from server
 				if (verbose) System.out.println("Waiting for DATA packet from server...");
@@ -224,8 +215,6 @@ public class Client implements Exitable {
 					if (verbose) System.err.println("Disk full. Aborting transfer...\n");
 
 					// Closes socket and aborts thread
-					sendReceiveSocket.close();
-					
 					return;
 				}
 
@@ -269,7 +258,7 @@ public class Client implements Exitable {
 				System.out.println("Directory does not exist.");
 			}
 		} while (!TFTP.isDirectory(directory));
-		System.out.println("The directory you entered is: " + directory);
+		System.out.println("The directory you entered is: " + directory + "\n");
 
 		while (true) {
 			boolean validCmd = false;
@@ -366,10 +355,5 @@ public class Client implements Exitable {
 	public static void main (String[] args) {
 		Client client = new Client();
 		client.run();
-		//try {
-			//client.read(InetAddress.getLocalHost(), "a.txt", "netascii");
-			//client.write(InetAddress.getLocalHost(), "a.txt", "netascii");
-		//} catch(Exception e) {
-		//}
 	}
 }
