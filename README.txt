@@ -1,11 +1,11 @@
 SYSC 3303: Summer 2015 Project
-Iteration #1
+Iteration #2
 
 --Group Members [Role]--
-Tianming Zhuang 100875151 		[Coding]
-Maryn Marsland 	100854916		[UML Diagrams/Team Coordinator]
-Brandon To 		100874049		[Testing]
-Yuan Sun 		100878484		[Coding]
+Tianming Zhuang 100875151 		[Testing]
+Maryn Marsland 	100854916	  	[Coding]
+Brandon To 		100874049	  	  [Coding]
+Yuan Sun 		100878484	  	    [UML Diagrams/Team Coordinator]
 
 --Files--
 Client.java
@@ -18,10 +18,7 @@ Exitable.java
 diagrams.pdf - UCM and Class diagrams
 
 --Instructions--
-1. Run main() in server class
-2. Run main in intermediate class
-3. Run main in client class
-4. Observe file transfer in separate console windows
+1.
 
 --Notes--
 
