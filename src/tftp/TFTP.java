@@ -143,7 +143,6 @@ public class TFTP {
 				packetQueue.add(formDATAPacket(addr, port, blockNumber, new byte[0]));
 			}
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 			throw e;
 		} catch(Exception e) {
 			e.printStackTrace();
