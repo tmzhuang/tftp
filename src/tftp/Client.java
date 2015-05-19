@@ -203,7 +203,7 @@ public class Client implements Exitable {
 							replyAddr,
 							TID,
 							TFTP.ERROR_CODE_DISK_FULL,
-							r.getFileName() + " could not be transferred because disk is full.");
+							"\"" + r.getFileName() + "\" could not be transferred because disk is full.");
 
 					// Sends error packet
 					try {

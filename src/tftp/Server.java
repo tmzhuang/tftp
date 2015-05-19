@@ -123,7 +123,7 @@ public class Server implements Exitable {
 						replyAddr,
 						TID,
 						TFTP.ERROR_CODE_FILE_NOT_FOUND,
-						fileName + " does not exist on server.");
+						"\"" + fileName + "\" does not exist on server.");
 
 				// Sends error packet
 				try {
@@ -147,7 +147,7 @@ public class Server implements Exitable {
 						replyAddr,
 						TID,
 						TFTP.ERROR_CODE_ACCESS_VIOLATION,
-						fileName + " exists on the server but could not be open.");
+						"You do not have read access to the file \"" + fileName + "\".");
 
 				// Sends error packet
 				try {
@@ -243,7 +243,7 @@ public class Server implements Exitable {
 							replyAddr,
 							TID,
 							TFTP.ERROR_CODE_ACCESS_VIOLATION,
-							fileName + " exists on the server but could not be overwritten.");
+							"You do not have write access to the file \"" + fileName + "\".");
 					
 					// Sends error packet
 					socket.send(errorPacket);
@@ -286,7 +286,7 @@ public class Server implements Exitable {
 								replyAddr,
 								TID,
 								TFTP.ERROR_CODE_DISK_FULL,
-								r.getFileName() + " could not be transferred because disk is full.");
+								"\"" + r.getFileName() + "\" could not be transferred because disk is full.");
 
 						// Sends error packet
 						try {
@@ -307,7 +307,7 @@ public class Server implements Exitable {
 					if (verbose) System.out.println("Sending ACK" + currentBlockNumber + ".");
 					ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
 					socket.send(ackPacket);
-					currentBlockNumber = (currentBlockNumber + 1) % 65536;
+					currentBlockNumber = (currentBlockNumber + 1) % (TFTP.MAX_BLOCK_NUMBER + 1);
 				} while (TFTP.getData(receivePacket).length == TFTP.MAX_DATA_SIZE);
 				// Write data to file
 				TFTP.writeBytesToFile(directory + r.getFileName(), fileBytes);

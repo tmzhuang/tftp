@@ -143,7 +143,7 @@ public class TFTP {
 				byte[] buf = new byte[n];
 				System.arraycopy(data,0,buf,0,n);
 				packetQueue.add(formDATAPacket(addr, port, blockNumber, buf));
-				blockNumber = (blockNumber + 1) % MAX_BLOCK_NUMBER;
+				blockNumber = (blockNumber + 1) % (MAX_BLOCK_NUMBER + 1);
 				lastn = n;
 			}
 			// Close stream
@@ -605,7 +605,7 @@ public class TFTP {
 		File file = new File(filePath);
 		return file.canWrite();
 	}
-	
+
 	public static boolean delete(String filePath) {
 		File file = new File(filePath);
 		Path path = file.toPath();
