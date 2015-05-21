@@ -132,7 +132,7 @@ public class Server implements Exitable {
 				}
 
 				// Echo error message
-				if (verbose) System.out.println("File does not exist. Aborting transfer...\n");
+				if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_FILE_NOT_FOUND + ": File does not exist. Aborting transfer...\n");
 
 				// Closes socket and aborts thread
 				socket.close();
@@ -157,7 +157,7 @@ public class Server implements Exitable {
 				}
 
 				// Echo error message
-				System.out.println("File access violation. Aborting transfer...\n");
+				if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_ACCESS_VIOLATION + ": File access violation. Aborting transfer...\n");
 
 				// Closes socket and aborts thread
 				socket.close();
@@ -208,7 +208,7 @@ public class Server implements Exitable {
 								throw new Exception("ACK packet received does not match block number of DATA sent.");
 							break;
 						case TFTP.ERROR_OP_CODE:
-							System.out.println("ERROR packet received: " + TFTP.getErrorMessage(receivePacket) + "\n");
+							System.out.println("ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + "\n");
 							return;
 						default:
 							// Throw exception if wrong OP code
@@ -249,7 +249,7 @@ public class Server implements Exitable {
 					socket.send(errorPacket);
 
 					// Echo error message
-					if (verbose) System.out.println("File access violation. Aborting transfer...\n");
+					if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_ACCESS_VIOLATION + ": File access violation. Aborting transfer...\n");
 					
 					// Closes socket and aborts thread
 					socket.close();
@@ -295,7 +295,7 @@ public class Server implements Exitable {
 						}
 
 						// Echo error message
-						if (verbose) System.out.println("Disk full. Aborting transfer...\n");
+						if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_DISK_FULL + ": Disk full. Aborting transfer...\n");
 
 						// Closes socket and aborts thread
 						socket.close();

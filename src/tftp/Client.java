@@ -70,7 +70,7 @@ public class Client implements Exitable {
 					throw new Exception("ACK packet received does not match block number of DATA sent.");
 				break;
 			case TFTP.ERROR_OP_CODE:
-				System.out.println("ERROR packet received: " + TFTP.getErrorMessage(receivePacket) + "\n");
+				System.out.println("ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + "\n");
 				return;
 			default:
 				throw new Exception("Expected ACK packet but a non-ACK packet was received.");
@@ -124,7 +124,7 @@ public class Client implements Exitable {
 							throw new Exception("ACK packet received does not match block number of DATA sent.");
 						break;
 					case TFTP.ERROR_OP_CODE:
-						System.out.println("ERROR packet received: " + TFTP.getErrorMessage(receivePacket) + "\n");
+						System.out.println("ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + "\n");
 						return;
 					default:
 						// Throw exception if wrong OP code
@@ -176,7 +176,7 @@ public class Client implements Exitable {
 							throw new Exception("DATA packet received has an unexpected block number.");
 						break;
 					case TFTP.ERROR_OP_CODE:
-						System.out.println("ERROR packet received: " + TFTP.getErrorMessage(dataPacket) + "\n");
+						System.out.println("ERROR code " + TFTP.getErrorCode(dataPacket) + ": " + TFTP.getErrorMessage(receivePacket) + "\n");
 						return;
 					default:
 						throw new Exception("Expected DATA packet but a non-DATA packet was received.");
@@ -191,9 +191,6 @@ public class Client implements Exitable {
 				if (verbose) System.out.println("DATA" + TFTP.getBlockNumber(dataPacket) + " received.");
 				if (verbose) System.out.println("The size of the data was " + TFTP.getData(dataPacket).length + ".");
 				
-				// Test output... DELETE later
-				System.out.println("free space = " + TFTP.getFreeSpaceOnFileSystem(directory));
-
 				// Write data to file
 				if (verbose) System.out.println("Appending current block to filebytes.");
 				fileBytes = TFTP.appendData(dataPacket, fileBytes);
@@ -212,7 +209,7 @@ public class Client implements Exitable {
 					}
 
 					// Echo error message
-					if (verbose) System.out.println("Disk full. Aborting transfer...\n");
+					if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_DISK_FULL + ": Disk full. Aborting transfer...\n");
 
 					// Closes socket and aborts thread
 					return;
