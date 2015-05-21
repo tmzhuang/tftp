@@ -30,14 +30,18 @@ public class TFTP {
 	public static final int ACK_OP_CODE = 4;
 	public static final int ERROR_OP_CODE = 5;
 	public static final int ERROR_CODE_SIZE = 2;
+	public static final int ERROR_CODE_NOT_DEFINED = 0;
 	public static final int ERROR_CODE_FILE_NOT_FOUND = 1;
 	public static final int ERROR_CODE_ACCESS_VIOLATION = 2;
 	public static final int ERROR_CODE_DISK_FULL = 3;
+	public static final int ERROR_CODE_NO_SUCH_USER = 7;
 	public static final int MIN_PORT = 1;
 	public static final int MAX_PORT = 65535;
 	public static final int MAX_ERROR_CODE = 7;
 	public static final int MAX_OP_CODE = 5;
 	public static final int MAX_BLOCK_NUMBER = 65535;
+	public static final String MODE_NETASCII = "netascii";
+	public static final String MODE_OCTET = "octet";
 
 	/**
 	 * Forms a DatagramPacket with an empty data buffer large enough to hold the maximum
@@ -479,6 +483,249 @@ public class TFTP {
 		return new DatagramPacket(buf, buf.length, addr, port);	
 	}
 
+	// Returns true if request packet matches TFTP specifications
+	public static boolean verifyRequestPacket(DatagramPacket packet)
+	{
+		// Stores the data that we are checking against
+		byte data[] = packet.getData();
+		int dataLength = data.length;
+		CheckedOffset offset = new CheckedOffset(dataLength);
+
+		try
+		{
+			// Check if first byte is 0
+			if (data[offset.getOffset()] != 0)
+			{
+				return false;
+			}
+			offset.incrementOffset(1);
+
+			// Check if next byte is READ_OP_CODE or WRITE_OP_CODE
+			if (data[offset.getOffset()] != READ_OP_CODE && data[offset.getOffset()] != WRITE_OP_CODE)
+			{
+				return false;
+			}
+			offset.incrementOffset(1);
+
+			// Check for text data (file name)
+			while (data[offset.getOffset()] != 0)
+			{
+				offset.incrementOffset(1);
+			}
+
+			// Check if next byte is 0
+			if (data[offset.getOffset()] != 0)
+			{
+				return false;
+			}
+			offset.incrementOffset(1);
+
+			// Check for "netascii" or "octet" (any case)
+			int modeStartOffset = offset.getOffset();
+			while (data[offset.getOffset()] != 0)
+			{
+				offset.incrementOffset(1);
+			}
+
+			// Calculates the mode length using the offset
+			int modeLength = offset.getOffset() - modeStartOffset;
+
+			// Immediately return false if the length of the mode is not the correct length
+			if ((modeLength != MODE_NETASCII.length()) && (modeLength != MODE_OCTET.length()))
+			{
+				return false;
+			}
+
+			// Constructs the mode as a string
+			byte[] modeBytes = new byte[modeLength];
+			System.arraycopy(data, modeStartOffset, modeBytes, 0, modeLength);
+			String mode = new String(modeBytes);
+
+			// Converts the mode to lower case and check for match
+			String modeLower = mode.toLowerCase();
+			if (!modeLower.equals(MODE_NETASCII) && !modeLower.equals(MODE_OCTET))
+			{
+				return false;
+			}
+
+			// Check if next byte is 0
+			if (data[offset.getOffset()] != 0)
+			{
+				return false;
+			}
+
+			return true;
+		}
+		catch (IndexOutOfBoundsException e)
+		{
+			//System.err.println("IndexOutOfBoundsException");
+			return false;
+		}
+	}
+
+	// Returns true if data packet matches TFTP specifications
+	public static boolean verifyDataPacket(DatagramPacket packet, int blockNumber)
+	{
+		assert((blockNumber >= 0) && (blockNumber <= MAX_BLOCK_NUMBER));
+
+		// Stores the data that we are checking against
+		byte data[] = packet.getData();
+		int dataLength = data.length;
+		CheckedOffset offset = new CheckedOffset(dataLength);
+
+		try
+		{
+			// Check if first byte is 0
+			if (data[offset.getOffset()] != 0)
+			{
+				return false;
+			}
+			offset.incrementOffset(1);
+
+			// Check if next byte is OPCODE_DATA
+			if (data[offset.getOffset()] != DATA_OP_CODE)
+			{
+				return false;
+			}
+			offset.incrementOffset(1);
+
+			// Saves the next two bytes
+			byte msb_blockNumber = data[offset.getOffset()];
+			offset.incrementOffset(1);
+			byte lsb_blockNumber = data[offset.getOffset()];
+			offset.incrementOffset(1);
+
+			// Converts the saved two bytes into an int
+			int parsedBlockNumber = toUnsignedInt(msb_blockNumber)*256 +
+									toUnsignedInt(lsb_blockNumber);
+
+			// Check if block numbers match
+			if (parsedBlockNumber != blockNumber)
+			{
+				return false;
+			}
+
+			return true;
+		}
+		catch (IndexOutOfBoundsException e)
+		{
+			System.err.println("IndexOutOfBoundsException");
+			return false;
+		}
+	}
+
+	// Returns true if acknowledgement packet matches TFTP specifications
+	public static boolean verifyAckPacket(DatagramPacket packet, int blockNumber)
+	{
+		assert((blockNumber >= 0) && (blockNumber <= MAX_BLOCK_NUMBER));
+
+		// Stores the data that we are checking against
+		byte data[] = packet.getData();
+		int dataLength = 4;
+		CheckedOffset offset = new CheckedOffset(dataLength);
+
+		try
+		{
+			// Check if first byte is 0
+			if (data[offset.getOffset()] != 0)
+			{
+				return false;
+			}
+			offset.incrementOffset(1);
+
+			// Check if next byte is OPCODE_ACK
+			if (data[offset.getOffset()] != ACK_OP_CODE)
+			{
+				return false;
+			}
+			offset.incrementOffset(1);
+
+			// Saves the next two bytes
+			byte msb_blockNumber = data[offset.getOffset()];
+			offset.incrementOffset(1);
+			byte lsb_blockNumber = data[offset.getOffset()];
+			offset.incrementOffset(1);
+
+			// Converts the saved two bytes into an int
+			int parsedBlockNumber = toUnsignedInt(msb_blockNumber)*256 +
+									toUnsignedInt(lsb_blockNumber);
+
+			// Check if block numbers match
+			if (parsedBlockNumber != blockNumber)
+			{
+				return false;
+			}
+
+			return true;
+		}
+		catch (IndexOutOfBoundsException e)
+		{
+			System.err.println("IndexOutOfBoundsException");
+			return false;
+		}
+	}
+
+	// Returns true if error packet matches TFTP specifications
+	public static boolean verifyErrorPacket(DatagramPacket packet)
+	{
+		// Stores the data that we are checking against
+		byte data[] = packet.getData();
+		int dataLength = data.length;
+		CheckedOffset offset = new CheckedOffset(dataLength);
+
+		try
+		{
+			// Check if first byte is 0
+			if (data[offset.getOffset()] != 0)
+			{
+				return false;
+			}
+			offset.incrementOffset(1);
+
+			// Check if next byte is OPCODE_ERROR
+			if (data[offset.getOffset()] != ERROR_OP_CODE)
+			{
+				return false;
+			}
+			offset.incrementOffset(1);
+
+			// Check if next byte is 0
+			if (data[offset.getOffset()] != 0)
+			{
+				return false;
+			}
+			offset.incrementOffset(1);
+
+			// Check if next byte is a valid error code
+			if ((data[offset.getOffset()] < ERROR_CODE_NOT_DEFINED) ||
+				(data[offset.getOffset()] > ERROR_CODE_NO_SUCH_USER))
+			{
+				return false;
+			}
+			offset.incrementOffset(1);
+
+			// Check for text data (message)
+			while (data[offset.getOffset()] != 0)
+			{
+				offset.incrementOffset(1);
+			}
+
+			// Check if last byte is 0
+			if (data[offset.getOffset()] != 0)
+			{
+				return false;
+			}
+			offset.incrementOffset(1);
+
+			return true;
+		}
+		catch (IndexOutOfBoundsException e)
+		{
+			System.err.println("IndexOutOfBoundsException");
+			return false;
+		}
+	}
+
 	/**
 	* Parse a given DatagramPacket p to see if it is valid. A valid packet must begin
 	* with [0,1] or [0,2], followed by an arbitrary number of bytes representing the 
@@ -677,6 +924,34 @@ public class TFTP {
 				return "ERROR";
 			default:
 				throw new UnsupportedOperationException();
+		}
+	}
+
+	private static class CheckedOffset
+	{
+		private int offset;
+		private int upperBound;
+
+		public CheckedOffset(int upperBound)
+		{
+			assert(upperBound > 0);
+			offset = 0;
+			this.upperBound = upperBound;
+		}
+
+		public int getOffset()
+		{
+			return offset;
+		}
+
+		public void incrementOffset(int increment)
+		{
+			assert(increment >= 0);
+			offset += increment;
+			if (offset > upperBound)
+			{
+				throw new IndexOutOfBoundsException();
+			}
 		}
 	}
 }
