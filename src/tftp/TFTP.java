@@ -229,6 +229,23 @@ public class TFTP {
 		return opCode;
 	}
 
+	public static int getModeIndex(DatagramPacket packet)
+	{
+		if (verifyRequestPacket(packet)) {
+			int zeroCount = 0;
+			int position = 0;
+			while(zeroCount != 2 && position < packet.getLength()) {
+				if (packet.getData()[position] == 0)
+					zeroCount++;
+				position++;
+			}
+			return position;
+		}
+		else
+			return 0;
+	}
+	
+	
 	/**
 	 * Checks the validity of the op code opCode supplied
 	 *
@@ -772,7 +789,7 @@ public class TFTP {
 	* @return Request of the packet.
 	*/
 	public static Request parseRQ(DatagramPacket p) {
-		Request.Type t;
+		Request.Type t = Request.Type.TEST;
 		String f, m;
 		int currentIndex = 0;
 		int opCode = getOpCode(p);
@@ -793,6 +810,7 @@ public class TFTP {
 				break;
 			default:
 				throw new IllegalArgumentException();
+				//break;
 		}
 
 		// Get filename

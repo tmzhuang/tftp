@@ -91,6 +91,27 @@ public class Server implements Exitable {
 		 * method based on the OP code of the packet.
 		 */
 		public void run() {
+			if (!TFTP.verifyRequestPacket(initialPacket))
+			{
+				DatagramPacket errorPacket = TFTP.formERRORPacket(
+						replyAddr,
+						TID,
+						TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
+						"Request packet malformed");
+						
+				try {
+					socket.send(errorPacket);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				
+				if (verbose) {
+					System.out.println("ERROR CODE " + TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION + ": Request packet malformed. Aborting transfer...\n");
+				}
+				
+				socket.close();
+				return;
+			}
 			Request r = TFTP.parseRQ(initialPacket);
 			System.out.println(r.getType() + " request for file \"" + directory + r.getFileName() + "\".\n");
 
@@ -218,7 +239,7 @@ public class Server implements Exitable {
 								socket.send(errorPacket);
 
 								// Echo error message
-								System.err.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
+								System.out.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
 
 								unexpectedPacket = true;
 								continue;
@@ -229,7 +250,7 @@ public class Server implements Exitable {
 						if (!TFTP.verifyAckPacket(receivePacket, currentBlockNumber)) {
 							// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
 							if (TFTP.verifyErrorPacket(receivePacket)) {
-								System.err.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
+								System.out.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 
 								// Closes socket and aborts thread
 								socket.close();
@@ -249,7 +270,7 @@ public class Server implements Exitable {
 								socket.send(errorPacket);
 
 								// Echo error message
-								System.err.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+								System.out.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
 								
 								// Closes socket and aborts thread
 								socket.close();
@@ -328,7 +349,7 @@ public class Server implements Exitable {
 						socket.send(errorPacket);
 
 						// Echo error message
-						System.err.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
+						System.out.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
 						continue;
 					}
 
@@ -337,7 +358,7 @@ public class Server implements Exitable {
 						// If an ERROR packet is received instead of the expected DATA packet, delete the file
 						// and abort the transfer
 						if (TFTP.verifyErrorPacket(receivePacket)) {
-							System.err.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
+							System.out.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 							return;
 						}
 						// If the received packet is not a DATA or an ERROR packet, then send an illegal TFTP
@@ -354,7 +375,7 @@ public class Server implements Exitable {
 							socket.send(errorPacket);
 
 							// Echo error message
-							System.err.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+							System.out.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
 							return;
 						}
 					}
