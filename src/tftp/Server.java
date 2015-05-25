@@ -11,9 +11,8 @@ import java.util.*;
  * @version Iteration 1
  */
 public class Server implements Exitable {
-	private static int RECEIVE_PORT = 69;
-	//private static int RECEIVE_PORT = 32002;
-	private static int BUF_SIZE = 100; // Default buffer size for packet data
+	//private static int RECEIVE_PORT = 69;
+	private static int RECEIVE_PORT = 32002;
 	private boolean verbose = true;
 	private boolean running = true;
 	private String directory;
@@ -188,34 +187,78 @@ public class Server implements Exitable {
 
 				// Wait for ACK
 				try {
-					// Get a packet from client
-					DatagramPacket receivePacket = TFTP.formPacket();
+					// Flag set to true if an unexpected packet is received
+					boolean unexpectedPacket;
+
+					DatagramPacket receivePacket;
 					if (verbose) System.out.println("Waiting for ACK" + currentBlockNumber + "...");
-					socket.receive(receivePacket);
 
-					// Throw exception if sender is invalid
-					System.out.println("Expected reply address is " + replyAddr.getHostAddress() + ":" + TID + ".");
-					System.out.println("Received from " + receivePacket.getAddress() + ":" + receivePacket.getPort() + ".");
-					if (!receivePacket.getAddress().equals(replyAddr)) System.out.println("Wrong address.");
-					if (receivePacket.getPort() != TID) System.out.println("Wrong port.");
-					if (!receivePacket.getAddress().equals(replyAddr) || receivePacket.getPort() != TID) 
-						throw new Exception("Packet received from invalid sender.");
+						// Continue to receive packets until a packet from the correct client is received
+						//http://www.coderanch.com/t/206099/sockets/java/DatagramPacket-getLength-refresh
+						do {
+							unexpectedPacket = false;
+							receivePacket = TFTP.formPacket();
 
-					switch (TFTP.getOpCode(receivePacket)) {
-						case TFTP.ACK_OP_CODE:
-							// Throw exception if DATA and ACK block numbers don't match
-							if (TFTP.getBlockNumber(receivePacket) != currentBlockNumber)
-								throw new Exception("ACK packet received does not match block number of DATA sent.");
-							break;
-						case TFTP.ERROR_OP_CODE:
-							System.out.println("ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + "\n");
-							return;
-						default:
-							// Throw exception if wrong OP code
-							throw new Exception("Expected ACK packet but a non-ACK packet was received.");
-					}
+							// Receives acknowledgement packet from client
+							socket.receive(receivePacket);
+							TFTP.shrinkData(receivePacket);
+
+							// Check if the address and port of the received packet match the TID
+							InetAddress packetAddress = receivePacket.getAddress();
+							int packetPort = receivePacket.getPort();
+							if (!(packetAddress.equals(replyAddr) && (packetPort == TID))) {
+								// Creates an "unknown TID" error packet
+								DatagramPacket errorPacket = TFTP.formERRORPacket(
+										packetAddress,
+										packetPort,
+										TFTP.ERROR_CODE_UNKNOWN_TID,
+										"The address and port of the packet does not match the TID of the ongoing transfer.");
+
+								// Sends error packet
+								socket.send(errorPacket);
+
+								// Echo error message
+								System.err.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
+
+								unexpectedPacket = true;
+								continue;
+							}
+						} while (unexpectedPacket);
+
+						// This block is entered if the packet received is not a valid ACK packet
+						if (!TFTP.verifyAckPacket(receivePacket, currentBlockNumber)) {
+							// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
+							if (TFTP.verifyErrorPacket(receivePacket)) {
+								System.err.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
+
+								// Closes socket and aborts thread
+								socket.close();
+								return;
+							}
+							// If the received packet is not an ACK or an ERROR packet, then send an illegal TFTP
+							// operation ERROR packet and abort the transfer
+							else {
+								// Creates an "illegal TFTP operation" error packet
+								DatagramPacket errorPacket = TFTP.formERRORPacket(
+										replyAddr,
+										TID,
+										TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
+										fileName + " could not be transferred because of an illegal TFTP operation (server expected a ACK packet with block#: " + currentBlockNumber + ")");
+
+								// Sends error packet
+								socket.send(errorPacket);
+
+								// Echo error message
+								System.err.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+								
+								// Closes socket and aborts thread
+								socket.close();
+								return;
+							}
+						}
 
 					if (verbose) System.out.println("ACK" + currentBlockNumber + " received.");
+					currentBlockNumber = (currentBlockNumber + 1) % 65536;
 				} catch(Exception e) {
 					System.out.println(e.getMessage());
 				}
@@ -261,19 +304,65 @@ public class Server implements Exitable {
 				DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, 0);
 				socket.send(ackPacket);
 
+				// Flag set when transfer is finished
+				boolean transferComplete = false;
+
 				do {
 					// Wait for a DATA packet
 					if (verbose) System.out.println("Waiting for DATA" + currentBlockNumber + "...");
 					receivePacket = TFTP.formPacket();
 					socket.receive(receivePacket);
+					TFTP.shrinkData(receivePacket);
 
-					// Throw exception if wrong OP code
-					if (TFTP.getOpCode(receivePacket) != TFTP.DATA_OP_CODE)
-						throw new Exception("Expected DATA packet but a non-DATA packet was received.");
+					InetAddress packetAddress = receivePacket.getAddress();
+					int packetPort = receivePacket.getPort();
+					if (!(packetAddress.equals(replyAddr) && (packetPort == TID))) {
+						// Creates an "unknown TID" error packet
+						DatagramPacket errorPacket = TFTP.formERRORPacket(
+								packetAddress,
+								packetPort,
+								TFTP.ERROR_CODE_UNKNOWN_TID,
+								"The address and port of the packet does not match the TID of the ongoing transfer.");
 
-					// Throw exception if unexpected block number
-					if (TFTP.getBlockNumber(receivePacket) != currentBlockNumber)
-						throw new Exception("DATA packet received has an unexpected block number.");
+						// Sends error packet
+						socket.send(errorPacket);
+
+						// Echo error message
+						System.err.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
+						continue;
+					}
+
+					// This block is entered if the packet received is not a valid DATA packet
+					if (!TFTP.verifyDataPacket(receivePacket, currentBlockNumber)) {
+						// If an ERROR packet is received instead of the expected DATA packet, delete the file
+						// and abort the transfer
+						if (TFTP.verifyErrorPacket(receivePacket)) {
+							System.err.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
+							return;
+						}
+						// If the received packet is not a DATA or an ERROR packet, then send an illegal TFTP
+						// operation ERROR packet and abort the transfer
+						else {
+							// Creates an "illegal TFTP operation" error packet
+							DatagramPacket errorPacket = TFTP.formERRORPacket(
+									replyAddr,
+									TID,
+									TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
+									fileName + " could not be transferred because of an illegal TFTP operation (server expected a DATA packet with block#: " + currentBlockNumber + ")");
+
+							// Sends error packet
+							socket.send(errorPacket);
+
+							// Echo error message
+							System.err.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+							return;
+						}
+					}
+
+					// Transfer is complete if data block is less than MAX_DATA_SIZE
+					if (receivePacket.getLength() < TFTP.MAX_PACKET_SIZE) {
+						transferComplete = true;
+					}
 
 					// Echo successful data receive
 					if (verbose) System.out.println("DATA" + currentBlockNumber + "received.");
@@ -299,7 +388,6 @@ public class Server implements Exitable {
 
 						// Closes socket and aborts thread
 						socket.close();
-
 						return;
 					}
 
@@ -308,7 +396,8 @@ public class Server implements Exitable {
 					ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
 					socket.send(ackPacket);
 					currentBlockNumber = (currentBlockNumber + 1) % (TFTP.MAX_BLOCK_NUMBER + 1);
-				} while (TFTP.getData(receivePacket).length == TFTP.MAX_DATA_SIZE);
+				} while (!transferComplete);
+				//} while (TFTP.getData(receivePacket).length == TFTP.MAX_DATA_SIZE);
 				// Write data to file
 				TFTP.writeBytesToFile(directory + r.getFileName(), fileBytes);
 				if (verbose) System.out.println("\nWrite complete.\n");
@@ -352,18 +441,13 @@ public class Server implements Exitable {
 
 			while (running) {
 				// Form packet for reception
-				byte[] buf = new byte[BUF_SIZE];
-				DatagramPacket packet = new DatagramPacket(buf, buf.length);
+				DatagramPacket packet = TFTP.formPacket();
 
 				// Receive packet
 				try {
 					//if (verbose) System.out.println("Waiting for request from client...");
 					receiveSocket.receive(packet);
-					System.arraycopy(buf,0,buf,0,packet.getLength());
-					// Truncate data to the length received
-					byte[] data = new byte[packet.getLength()];
-					System.arraycopy(buf,0,data,0,packet.getLength());
-					packet.setData(data);
+					TFTP.shrinkData(packet);
 					if (verbose) System.out.println("Packet received.");
 				} catch(Exception e) {
 					if (e instanceof InterruptedIOException) {

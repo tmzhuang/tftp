@@ -62,6 +62,7 @@ public class Client implements Exitable {
 			DatagramPacket receivePacket = TFTP.formPacket();
 			if (verbose) System.out.println("Waiting for ACK0...");
 			sendReceiveSocket.receive(receivePacket);
+			TFTP.shrinkData(receivePacket);
 
 			// This block is entered if the packet received is not a valid ACK packet
 			if (!TFTP.verifyAckPacket(receivePacket, 0)) {
@@ -135,6 +136,7 @@ public class Client implements Exitable {
 					receivePacket = TFTP.formPacket();
 
 					sendReceiveSocket.receive(receivePacket);
+					TFTP.shrinkData(receivePacket);
 
 					InetAddress packetAddress = receivePacket.getAddress();
 					int packetPort = receivePacket.getPort();
