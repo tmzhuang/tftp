@@ -250,7 +250,6 @@ public class Client implements Exitable {
 								"The address and port of the packet does not match the TID of the ongoing transfer.");
 
 						// Sends error packet
-						TFTP.printPacket(errorPacket);
 						sendReceiveSocket.send(errorPacket);
 
 						// Echo error message

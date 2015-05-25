@@ -49,10 +49,10 @@ public class TFTP {
 	 * Forms a DatagramPacket with an empty data buffer large enough to hold the maximum
 	 * packet size
 	 *
-	 * @return DatagramPacket with an empty data buffer of size MAX_PACKET_SIZE
+	 * @return DatagramPacket with an empty data buffer of size MAX_PACKET_SIZE + 1
 	 */
 	public static DatagramPacket formPacket() {
-		byte[] data = new byte[MAX_PACKET_SIZE];
+		byte[] data = new byte[MAX_PACKET_SIZE + 1];
 		return new DatagramPacket(data, data.length);
 	}
 
@@ -965,7 +965,7 @@ public class TFTP {
 	}
 
 	// Converts the OPCODE to it's string representation
-	private static String opCodeToString(int operation) {
+	public static String opCodeToString(int operation) {
 		switch(operation) {
 			case READ_OP_CODE:
 				return "Read";

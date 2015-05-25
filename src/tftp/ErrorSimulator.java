@@ -4,7 +4,16 @@ import java.io.IOException;
 import java.net.*;
 import java.util.Scanner;
 
-public class ErrorSimulator {
+import tftp.TFTP;
+
+/**
+ * Implementation of the TFTP file transfer program on error simulator side.
+ * 
+ * @author Team 4
+ * @version Iteration 3
+ */
+public class ErrorSimulator
+{
 	/**
 	 * Fields
 	 */
@@ -13,112 +22,220 @@ public class ErrorSimulator {
 	//private static int SEND_PORT = 69;
 	private static int RECEIVE_PORT = 32001;
 	private static int SEND_PORT = 32002;
-	int choices[] = new int[4];
-	int blockCount = 1;
+
+	// Mode types
+	private static final int MODE_NORMAL		= 1;
+	private static final int MODE_READ_WRITE	= 2;
+	private static final int MODE_DATA_ACK		= 3;
 	
-	//private static final int CLIENT_SENT_ERROR = 1;
-	//private static final int SERVER_SENT_ERROR = 2;
+	// Errors for MODE_READ_WRITE
+	private static final int ERROR_PACKET_TOO_LARGE					= 1;
+	private static final int ERROR_INVALID_OPCODE					= 2;
+	private static final int ERROR_INVALID_MODE						= 3;
+	private static final int ERROR_MISSING_FILE_NAME				= 4;
+	private static final int ERROR_NO_TERMINATION_AFTER_FINAL_0		= 5;
+	private static final int ERROR_NO_FINAL_0						= 6;
+	
+	// Errors for MODE_DATA and MODE_ACK
+	//private static final int ERROR_PACKET_TOO_LARGE			= 1;
+	//private static final int ERROR_INVALID_OPCODE				= 2;
+	private static final int ERROR_INVALID_BLOCK_NUMBER			= 3;
+	private static final int ERROR_UNKNOWN_TID					= 4;
+	
+	// Cause of error for MODE_DATA_ACK
+	private static final int CAUSE_CLIENT_SENT = 1;
+	private static final int CAUSE_SERVER_SENT = 2;
+	
+	// Used for tracking where the previous packet received came from
+	private static final int RECEIVED_FROM_CLIENT = 1;
+	private static final int RECEIVED_FROM_SERVER = 2;
+	
+	private int modeSelected;
+	private int errorSelected;
+	private int causeSelected;
+	private int blockNumberSelected;
+	private boolean sendFromUnknownTID;
 	
 	/**
 	 * Class constructor
 	 */
-	public ErrorSimulator() {
-		try {
+	public ErrorSimulator()
+	{
+		try
+		{
 			receiveSocket = new DatagramSocket(RECEIVE_PORT);
-		} catch(Exception e) {
+		}
+		catch(Exception e)
+		{
 			e.printStackTrace();
 			System.exit(1);
 		}
+		modeSelected = -1;
+		errorSelected = -1;
+		causeSelected = -1;
+		blockNumberSelected = -1;
+		sendFromUnknownTID = false;
 	}
 
-	public void start() throws IOException {
-		try {
-			// Prompt for user inputs on error simulation mode
-			@SuppressWarnings("resource")
-			Scanner in = new Scanner(System.in);
-			System.out.println("Please select the type of packet for the error to occur in:\n"
-					+ "0 - Normal operation mode (no error will be simulated)\n"
-					+ "1 - RRQ/WRQ Packet\n"
-					+ "2 - ACK/DATA Packet");
-			choices[0] = in.nextInt();
-			switch (choices[0]) {
-			case 0:
-				System.out.println("0 has been chosen, error simulator will just pass on the packets.");
-				break;
-			case 1:
-				System.out.println("Select type of error to simulate:\n"
-						+ "0 - Normal operation mode (no error will be simulated)\n"
-						+ "1 - Packet too large\n"
-						+ "2 - Invalid TFTP Opcode\n"
-						+ "3 - Invalid mode\n"
-						+ "4 - Missing file name\n"
-						+ "5 - Packet does not terminate after final 0\n"
-						+ "6 - Final 0 is lost");
-				choices[1] = in.nextInt();
-				if (choices[1] == 0) {
-					System.out.println("0 has been chosen, error simulator will just pass on the packets.");
-					choices[0] = 0;
-					break;
-				}
-				else if (choices[1] > 0 && choices[1] < 7) {
-					System.out.println("Error simulator ready. Selected error will be simulated when it is applicable.\n");
-					break;
-				}
-				else
-					throw new IllegalArgumentException();
-			case 2:
-				System.out.println("Select type of error to simulate:\n"
-						+ "0 - Normal operation mode (no error will be simulated)\n"
-						+ "1 - Packet too large\n"
-						+ "2 - Invalid TFTP Opcode\n"
-						+ "3 - Invalid block number\n"
-						+ "4 - Unknown transfer ID");
-				choices[1] = in.nextInt();
-				if (choices[1] == 0) {
-					System.out.println("0 has been chosen, error simulator will just pass on the packets.");
-					choices[0] = 0;
-					break;
-				}
-				else if (choices[1] > 0 && choices[1] < 5) {
-					System.out.println("Please select:\n"
-							+ "0 - Normal operation mode (no error will be simulated)\n"
-							+ "1 - Client send the packet with simulated error\n"
-							+ "2 - Server send the packet with simulated error");
-					choices[2] = in.nextInt();
-					if (choices[2] == 0) {
-						choices[0] = 0;
-						choices[1] = 0;
-						System.out.println("0 has been chosen, error simulator will just pass on the packets.");
-						break;
-					}
-					else if (choices[2] == 1) {
-						System.out.println("Please enter packet block number(greater than 0) within the transfer in which to simulate the chosen error:");
-						choices[3] = in.nextInt();
-						if (choices[3] > 0) {
-							blockCount = 1;
-							System.out.println("Error simulator ready. Selected error will be simulated when it is applicable.\n");
-						}
-						else
-							throw new IllegalArgumentException();
-						break;
-					}
-					else if (choices[2] == 2) {
-						System.out.println("Please enter packet block number(with 0 stands for ACK 0 during a WRQ transfer) within the transfer in which "
-								+ "to simulate the chosen error:");
-						choices[3] = in.nextInt();
-						if (choices[3] >= 0) {
-							blockCount = 1;
-							System.out.println("Error simulator ready. Selected error will be simulated when it is applicable.\n");
-						}
-						else
-							throw new IllegalArgumentException();
-						break;
-					}
-				}
-			default:
-				throw new IllegalArgumentException();
+	public void start() throws IOException
+	{
+		// Scanner used for user input
+		Scanner scanner = new Scanner(System.in);
+
+		boolean validInput;
+		
+		String modeSelectedString;
+		do
+		{
+			validInput = true;
+			System.out.println("Select the type of packets that you want to simulate errors for:");
+			System.out.println("	(" + MODE_NORMAL + ") - No error simulation");
+			System.out.println("	(" + MODE_READ_WRITE + ") - RRQ/WRQ packets");
+			System.out.println("	(" + MODE_DATA_ACK + ") - DATA/ACK packets");
+			modeSelectedString = scanner.next();
+			
+			try
+			{
+				modeSelected = Integer.valueOf(modeSelectedString);
 			}
-			while (true) {
+			catch (NumberFormatException e)
+			{
+				System.out.println("Please enter a value from " + MODE_NORMAL + " to " + MODE_DATA_ACK);
+				validInput = false;
+				continue;
+			}
+
+			if ((modeSelected < MODE_NORMAL) || (modeSelected > MODE_DATA_ACK))
+			{
+				System.out.println("Please enter a value from " + MODE_NORMAL + " to " + MODE_DATA_ACK);
+				validInput = false;
+			}
+		} while (!validInput);
+
+		String errorSelectedString;	
+		String causeSelectedString;
+		String blockNumberSelectedString;
+		if (modeSelected == MODE_READ_WRITE)
+		{
+			do
+			{
+				validInput = true;
+				System.out.println("Select the type of error you wish to simulate:");
+				System.out.println("	(" + ERROR_PACKET_TOO_LARGE + ") - Packet too large");
+				System.out.println("	(" + ERROR_INVALID_OPCODE + ") - Invalid opcode");
+				System.out.println("	(" + ERROR_INVALID_MODE + ") - Invalid mode");
+				System.out.println("	(" + ERROR_MISSING_FILE_NAME + ") - Missing file name");
+				System.out.println("	(" + ERROR_NO_TERMINATION_AFTER_FINAL_0 + ") - No termination after final 0");
+				System.out.println("	(" + ERROR_NO_FINAL_0 + ") - No final 0");
+				errorSelectedString = scanner.next();
+
+				try
+				{
+					errorSelected = Integer.valueOf(errorSelectedString);
+				}
+				catch (NumberFormatException e)
+				{
+					System.out.println("Please enter a value from " + ERROR_PACKET_TOO_LARGE + " to " + ERROR_NO_FINAL_0);
+					validInput = false;
+					continue;
+				}
+
+				if ((errorSelected < ERROR_PACKET_TOO_LARGE) || (errorSelected > ERROR_NO_FINAL_0))
+				{
+					System.out.println("Please enter a value from " + ERROR_PACKET_TOO_LARGE + " to " + ERROR_NO_FINAL_0);
+					validInput = false;
+				}
+			} while (!validInput);
+		}
+		else if (modeSelected == MODE_DATA_ACK)
+		{
+			do
+			{
+				validInput = true;
+				System.out.println("Select the type of error you wish to simulate:");
+				System.out.println("	(" + ERROR_PACKET_TOO_LARGE + ") - Packet too large");
+				System.out.println("	(" + ERROR_INVALID_OPCODE + ") - Invalid opcode");
+				System.out.println("	(" + ERROR_INVALID_BLOCK_NUMBER + ") - Invalid block number");
+				System.out.println("	(" + ERROR_UNKNOWN_TID + ") - Unknown TID");
+				errorSelectedString = scanner.next();
+
+				try
+				{
+					errorSelected = Integer.valueOf(errorSelectedString);
+				}
+				catch (NumberFormatException e)
+				{
+					System.out.println("Please enter a value from " + ERROR_PACKET_TOO_LARGE + " to " + ERROR_UNKNOWN_TID);
+					validInput = false;
+					continue;
+				}
+
+				if ((errorSelected < ERROR_PACKET_TOO_LARGE) || (errorSelected > ERROR_UNKNOWN_TID))
+				{
+					System.out.println("Please enter a value from " + ERROR_PACKET_TOO_LARGE + " to " + ERROR_UNKNOWN_TID);
+					validInput = false;
+				}
+			} while (!validInput);
+			
+			do
+			{
+				validInput = true;
+				System.out.println("Select which host will cause the simulated error:");
+				System.out.println("	(" + CAUSE_CLIENT_SENT + ") - Client");
+				System.out.println("	(" + CAUSE_SERVER_SENT + ") - Server");
+				causeSelectedString = scanner.next();
+
+				try
+				{
+					causeSelected = Integer.valueOf(causeSelectedString);
+				}
+				catch (NumberFormatException e)
+				{
+					System.out.println("Please enter a value from " + CAUSE_CLIENT_SENT + " to " + CAUSE_SERVER_SENT);
+					validInput = false;
+					continue;
+				}
+
+				if ((causeSelected < CAUSE_CLIENT_SENT) || (causeSelected > CAUSE_SERVER_SENT))
+				{
+					System.out.println("Please enter a value from " + CAUSE_CLIENT_SENT + " to " + CAUSE_SERVER_SENT);
+					validInput = false;
+				}
+			} while (!validInput);
+			
+			do
+			{
+				validInput = true;
+				System.out.println("Enter the block number of the packet that the error will be simulated on:");
+				blockNumberSelectedString = scanner.next();
+
+				try
+				{
+					blockNumberSelected = Integer.valueOf(blockNumberSelectedString);
+				}
+				catch (NumberFormatException e)
+				{
+					System.out.println("Please enter a value from 0 to " + TFTP.MAX_BLOCK_NUMBER);
+					validInput = false;
+					continue;
+				}
+
+				if ((blockNumberSelected < 0) || (blockNumberSelected > TFTP.MAX_BLOCK_NUMBER))
+				{
+					System.out.println("Please enter a value from 0 to " + TFTP.MAX_BLOCK_NUMBER);
+					validInput = false;
+				}
+			} while (!validInput);
+		}
+
+		scanner.close();
+
+		System.out.println("Error simulator ready.\n");
+
+		try
+		{
+			while (true)
+			{
 				// Creates a DatagramPacket to receive request from client
 				DatagramPacket clientRequestPacket = TFTP.formPacket();
 
@@ -135,158 +252,184 @@ public class ErrorSimulator {
 				// Start request handler thread
 				requestHandlerThread.start();
 			}
-		} catch (IllegalArgumentException e) {
-			System.out.println("Error simulator terminated. Please select a valid choice based on options given.");
-		} finally {
+		}
+		finally
+		{
 			receiveSocket.close();
 		}
 	}
-
-	// Modify the packet based on choices on error that needed to simulate
-	public DatagramPacket tamperPacket(DatagramPacket receivePacket, int opCode, InetAddress forwardAddr, int TID)
+	
+	private void tamperPacket(DatagramPacket packet, int receivedFrom)
 	{
-		byte[] buf;
-		byte invalidOpcode = 9;
-		String invalidMode = "Invalid Mode";
-		byte[] tooLargePacket = new byte[TFTP.MAX_PACKET_SIZE];
-		for (int i = 0; i < tooLargePacket.length; i++) {
-			tooLargePacket[i] = 100;		// Random chosen number --> char 'd'
+		int operation = TFTP.getOpCode(packet);
+		if (((operation == TFTP.READ_OP_CODE) || (operation == TFTP.WRITE_OP_CODE))
+				&& (modeSelected == MODE_READ_WRITE))
+		{
+			tamperReadWritePacket(packet);
 		}
-		
-		try {
-			switch (choices[0]) {
-			// RRQ or WRQ Packet
-			case 1:
-				switch (choices[1]) {
-				case 1:
-					// Packet too large
-					buf = new byte[receivePacket.getLength() + tooLargePacket.length];
-					System.arraycopy(receivePacket.getData(), 0, buf, 0, TFTP.getModeIndex(receivePacket) - 1);
-					System.arraycopy(tooLargePacket, 0, buf, TFTP.getModeIndex(receivePacket) - 1, tooLargePacket.length);
-					System.arraycopy(receivePacket.getData(), TFTP.getModeIndex(receivePacket), 
-							buf, TFTP.getModeIndex(receivePacket) + tooLargePacket.length, 
-							buf.length - TFTP.getModeIndex(receivePacket) - tooLargePacket.length);
-					return new DatagramPacket(buf, buf.length, receivePacket.getAddress(), receivePacket.getPort());
-				case 2:
-					// Invalid TFTP Opcode
-					receivePacket.getData()[1] = invalidOpcode;
-					return receivePacket;
-				case 3:
-					// Invalid mode
-					buf = new byte[TFTP.getModeIndex(receivePacket) + invalidMode.getBytes().length + 1];
-					System.arraycopy(receivePacket.getData(), 0, buf, 0, TFTP.getModeIndex(receivePacket));
-					System.arraycopy(invalidMode.getBytes(), 0, buf, TFTP.getModeIndex(receivePacket), invalidMode.getBytes().length);
-					buf[buf.length - 1] = 0;
-					return new DatagramPacket(buf, buf.length, receivePacket.getAddress(), receivePacket.getPort());
-				case 4:
-					// Missing file name
-					buf = new byte[receivePacket.getLength() - TFTP.getModeIndex(receivePacket) + 3];
-					System.arraycopy(receivePacket.getData(), 0, buf, 0, 2);
-					System.arraycopy(receivePacket.getData(), TFTP.getModeIndex(receivePacket), buf, 3,
-							receivePacket.getLength() - TFTP.getModeIndex(receivePacket));
-					buf[2] = 0;
-					return new DatagramPacket(buf, buf.length, receivePacket.getAddress(), receivePacket.getPort());
-				case 5:
-					// Packet does not terminate after final 0
-					buf = new byte[receivePacket.getLength() + invalidMode.getBytes().length];
-					System.arraycopy(receivePacket.getData(), 0, buf, 0, receivePacket.getLength());
-					System.arraycopy(invalidMode.getBytes(), 0, buf, receivePacket.getLength(), invalidMode.getBytes().length);
-					return new DatagramPacket(buf, buf.length, receivePacket.getAddress(), receivePacket.getPort());
-				case 6:
-					// Final 0 is lost
-					buf = new byte[receivePacket.getLength() - 1];
-					System.arraycopy(receivePacket.getData(), 0, buf, 0, buf.length);
-					return new DatagramPacket(buf, buf.length, receivePacket.getAddress(), receivePacket.getPort());
-				default:
-					throw new IllegalArgumentException();
-				}
-			// ACK or DATA Packet
-			case 2:
-				//	 client send error & read				server send error & write
-				if ((choices[2] == 1 && opCode == 1) || (choices[2] == 2 && opCode == 2)) {
-					// ACK Packet
-					switch (choices[1]) {
-					case 1:
-						// Packet too large
-						buf = new byte[receivePacket.getLength()*2];
-						System.arraycopy(receivePacket.getData(), 0, buf, 0, receivePacket.getLength());
-						System.arraycopy(receivePacket.getData(), 0, buf, receivePacket.getLength(), receivePacket.getLength());
-						return new DatagramPacket(buf, buf.length, receivePacket.getAddress(), receivePacket.getPort());
-					case 2:
-						// Invalid TFTP Opcode
-						receivePacket.getData()[1] = invalidOpcode;
-						return receivePacket;
-					case 3:
-						// Invalid block number
-						if (choices[3] == 0)					//cases when ACK 0 is requested
-							receivePacket.getData()[3] = 1;
-						else {
-							receivePacket.getData()[2] = 0;
-							receivePacket.getData()[3] = 0;
-						}
-						return receivePacket;
-					case 4:
-						// Unknown transfer ID
-						System.out.println("I'm here.");
-						spawnUnknownTIDThread(receivePacket, forwardAddr, TID);
-					}
-				}
-				//          client send error & write			server send error & read
-				else if ((choices[2] == 1 && opCode == 2) || (choices[2] == 2 && opCode == 1)){
-					// DATA Packet
-					switch (choices[1]) {
-					case 1:
-						// Packet too large
-						buf = new byte[receivePacket.getLength() + tooLargePacket.length];
-						System.arraycopy(receivePacket.getData(), 0, buf, 0, receivePacket.getLength());
-						System.arraycopy(tooLargePacket, 0, buf, receivePacket.getLength(), tooLargePacket.length);
-						return new DatagramPacket(buf, buf.length, receivePacket.getAddress(), receivePacket.getPort());
-					case 2:
-						// Invalid TFTP Opcode
-						receivePacket.getData()[1] = invalidOpcode;
-						return receivePacket;
-					case 3:
-						// Invalid block number
-						receivePacket.getData()[2] = 0;
-						receivePacket.getData()[3] = 0;
-						return receivePacket;
-					case 4:
-						// Unknown transfer ID
-						spawnUnknownTIDThread(receivePacket, forwardAddr, TID);
-					}
-				}
-			default:
-				throw new IllegalArgumentException();
+		else if (((operation == TFTP.DATA_OP_CODE) || (operation == TFTP.ACK_OP_CODE))
+				&& (modeSelected == MODE_DATA_ACK)
+				&& (blockNumberSelected == TFTP.getBlockNumber(packet))
+				&& (receivedFrom == causeSelected))
+		{
+			tamperDataAckPacket(packet);
+		}
+	}
+	
+	private void tamperReadWritePacket(DatagramPacket packet)
+	{
+		if (errorSelected == ERROR_PACKET_TOO_LARGE)
+		{
+			// Creates a buffer large than the largest expected packet size, copy over the packet data
+			// over to it, then set it as the new packet data buffer
+			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for packet too large");
+			byte[] data = packet.getData();
+			byte[] dataLargeBuffer = new byte[TFTP.MAX_PACKET_SIZE + 1];
+			System.arraycopy(data, 0, dataLargeBuffer, 0, data.length);
+			packet.setData(dataLargeBuffer);
+		}
+		else if (errorSelected == ERROR_INVALID_OPCODE)
+		{
+			// Change the opcode to an invalid opcode
+			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for invalid opcode");
+			byte[] data = packet.getData();
+			data[1] = 100;
+			packet.setData(data);
+		}
+		else if (errorSelected == ERROR_INVALID_MODE)
+		{
+			// Change the mode to an invalid mode
+			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for invalid mode");
+			InetAddress address = null;
+			try
+			{
+				address = InetAddress.getLocalHost();
 			}
-		} catch (IllegalArgumentException e) {
-			System.out.println("Error simulation mode error, please restart the error simulator.");
+			catch (UnknownHostException e)
+			{
+				e.printStackTrace();
+			}
+			int port = 65535;
+			Request oldRequest = TFTP.parseRQ(packet);
+			String invalidMode = "invalidMode";
+			Request newRequest = new Request(oldRequest.getType(), oldRequest.getFileName(), invalidMode);
+			DatagramPacket newRequestPacket = TFTP.formRQPacket(
+					address,
+					port,
+					newRequest);
+			packet.setData(newRequestPacket.getData());
 		}
-		return receivePacket;
+		else if (errorSelected == ERROR_MISSING_FILE_NAME)
+		{
+			// Delete the file name from the data buffer
+			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for missing file name");
+			InetAddress address = null;
+			try
+			{
+				address = InetAddress.getLocalHost();
+			}
+			catch (UnknownHostException e)
+			{
+				e.printStackTrace();
+			}
+			int port = 65535;
+			Request oldRequest = TFTP.parseRQ(packet);
+			String missingFileName = "";
+			Request newRequest = new Request(oldRequest.getType(), missingFileName, oldRequest.getMode());
+			DatagramPacket newRequestPacket = TFTP.formRQPacket(
+					address,
+					port,
+					newRequest);
+			packet.setData(newRequestPacket.getData());
+		}
+		else if (errorSelected == ERROR_NO_TERMINATION_AFTER_FINAL_0)
+		{
+			// Creates a buffer with a byte added to the end of the packet data
+			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for no termination after final 0");
+			byte[] data = packet.getData();
+			byte[] dataPlusOne = new byte[data.length + 1];
+			System.arraycopy(data, 0, dataPlusOne, 0, data.length);
+			packet.setData(dataPlusOne);
+		}
+		else if (errorSelected == ERROR_NO_FINAL_0)
+		{
+			// Creates a buffer with a byte deleted from the end of the packet data
+			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for no final 0");
+			byte[] data = packet.getData();
+			byte[] dataMinusOne = new byte[data.length - 1];
+			System.arraycopy(data, 0, dataMinusOne, 0, data.length - 1);
+			packet.setData(dataMinusOne);
+		}
 	}
 
+	private void tamperDataAckPacket(DatagramPacket packet)
+	{
+		if (errorSelected == ERROR_PACKET_TOO_LARGE)
+		{
+			// Creates a buffer large than the largest expected packet size, copy over the packet data
+			// over to it, then set it as the new packet data buffer
+			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for packet too large");
+			byte[] data = packet.getData();
+			byte[] dataLargeBuffer = new byte[TFTP.MAX_PACKET_SIZE + 1];
+			System.arraycopy(data, 0, dataLargeBuffer, 0, data.length);
+			packet.setData(dataLargeBuffer);
+		}
+		else if (errorSelected == ERROR_INVALID_OPCODE)
+		{
+			// Change the opcode to an invalid opcode
+			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for invalid opcode");
+			byte[] data = packet.getData();
+			data[1] = 100;
+			packet.setData(data);
+		}
+		else if (errorSelected == ERROR_INVALID_BLOCK_NUMBER)
+		{
+			// Changes the block number
+			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for invalid block number");
+			byte[] data = packet.getData();
+			byte lsb_blockNumber = data[3];
+			lsb_blockNumber += 1;
+			data[3] = lsb_blockNumber;
+			packet.setData(data);
+		}
+		else if (errorSelected == ERROR_UNKNOWN_TID)
+		{
+			// Sets this flag to let spawnUnknownTIDThread() know that it should spawn a thread
+			System.out.println("Simulating ERROR 5 (Unknown TID)");
+			sendFromUnknownTID = true;
+		}
+	}
+	
 	private void spawnUnknownTIDThread(DatagramPacket packet, InetAddress addressTID, int portTID)
 	{
+		if (sendFromUnknownTID)
+		{
+			// Thread to handle client request
+			Thread unknownTIDThread;
 
-		// Thread to handle client request
-		Thread unknownTIDThread;
+			unknownTIDThread = new Thread(
+					new UnknownTIDTransferHandler(packet, addressTID, portTID),
+					"Unknown TID Trasfer Handler Thread");
 
-		unknownTIDThread = new Thread(
-				new UnknownTIDTransferHandler(packet, addressTID, portTID),
-				"Unknown TID Trasfer Handler Thread");
-
-		// Start unknown TID handler thread
-		unknownTIDThread.start();
-
+			// Start unknown TID handler thread
+			unknownTIDThread.start();
+			
+			sendFromUnknownTID = false;
+		}
 	}
 
 	/**
 	 * Creates a ErrorSimulator object and invoke it's start method
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args)
+	{
 		ErrorSimulator errorSimulator = new ErrorSimulator();
-		try {
+		try
+		{
 			errorSimulator.start();
-		} catch (IOException e) {
+		}
+		catch (IOException e)
+		{
 			e.printStackTrace();
 		}
 	}
@@ -294,36 +437,46 @@ public class ErrorSimulator {
 	/**
 	 * Thread used to handle client requests
 	 */
-	class RequestHandler implements Runnable {
-		DatagramPacket requestPacket;
+	class RequestHandler implements Runnable
+	{
+		private DatagramPacket requestPacket;
 
-		public RequestHandler(DatagramPacket requestPacket) {
+		public RequestHandler(DatagramPacket requestPacket)
+		{
 			this.requestPacket = requestPacket;
 		}
 
-		public void run() {
+		public void run()
+		{
+			// Returns if request packet is malformed
+			if (!TFTP.verifyRequestPacket(requestPacket))
+			{
+				return;
+			}
+
 			// Extract operation from packet
 			int operation = TFTP.getOpCode(requestPacket);
 
 			// Thread to handle client request
-			Thread transferHandlerThread = new Thread();
+			Thread transferHandlerThread;
 
 			// Creates thread corresponding to the operation received
-			switch (operation) {
-			case TFTP.READ_OP_CODE:
-				transferHandlerThread = new Thread(
-						new ReadTransferHandler(requestPacket),
-						"Read Transfer Handler Thread");
-				break;
-			case TFTP.WRITE_OP_CODE:
-				transferHandlerThread = new Thread(
-						new WriteTransferHandler(requestPacket),
-						"Write Transfer Handler Thread");
-				break;
-			default:
-				//throw new UnsupportedOperationException();
-				break;
+			switch (operation)
+			{
+				case TFTP.READ_OP_CODE:
+					transferHandlerThread = new Thread(
+							new ReadTransferHandler(requestPacket),
+							"Read Transfer Handler Thread");
+					break;
+				case TFTP.WRITE_OP_CODE:
+					transferHandlerThread = new Thread(
+							new WriteTransferHandler(requestPacket),
+							"Write Transfer Handler Thread");
+					break;
+				default:
+					throw new UnsupportedOperationException();
 			}
+
 			// Start request handler thread
 			transferHandlerThread.start();
 		}
@@ -332,15 +485,19 @@ public class ErrorSimulator {
 	/**
 	 * Thread used to handle client read transfers
 	 */
-	class ReadTransferHandler implements Runnable {
-		DatagramPacket clientRequestPacket;
+	class ReadTransferHandler implements Runnable
+	{
+		private DatagramPacket clientRequestPacket;
 
-		public ReadTransferHandler(DatagramPacket clientRequestPacket) {
+		public ReadTransferHandler(DatagramPacket clientRequestPacket)
+		{
 			this.clientRequestPacket = clientRequestPacket;
 		}
 
-		public void run() {
-			try {
+		public void run()
+		{
+			try
+			{
 				// Socket used for sending and receiving packets from server
 				DatagramSocket sendReceiveServerSocket = new DatagramSocket();
 
@@ -352,13 +509,9 @@ public class ErrorSimulator {
 						InetAddress.getLocalHost(),
 						SEND_PORT,
 						clientRequestPacket.getData());
-				
-				// Modify the RRQ if corresponding mode is selected
-				if (choices[0] == 1)
-					serverRequestPacket = tamperPacket(clientRequestPacket, TFTP.READ_OP_CODE, 
-							serverRequestPacket.getAddress(), SEND_PORT);
 
 				// Sends request packet through socket
+				tamperPacket(serverRequestPacket, RECEIVED_FROM_CLIENT);
 				TFTP.printPacket(serverRequestPacket);
 				sendReceiveServerSocket.send(serverRequestPacket);
 
@@ -379,8 +532,10 @@ public class ErrorSimulator {
 				// Flag indicating first loop iteration (for setting up TID)
 				boolean firstIteration = true;
 
-				try {
-					while (!transferComplete) {
+				try
+				{
+					while (!transferComplete)
+					{
 						// Creates a DatagramPacket to receive data packet from server
 						DatagramPacket dataPacket = TFTP.formPacket();
 
@@ -388,36 +543,34 @@ public class ErrorSimulator {
 						sendReceiveServerSocket.receive(dataPacket);
 
 						// Transfer is complete if server sends back an error packet
-						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE) {
+						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE)
+						{
 							errorPacketReceived = true;
 						}
 
 						// Transfer is complete if data block is less than MAX_DATA_SIZE
-						if (dataPacket.getLength() < TFTP.MAX_PACKET_SIZE) {
+						if (dataPacket.getLength() < TFTP.MAX_DATA_SIZE)
+						{
 							transferComplete = true;
-							TFTP.shrinkData(dataPacket);
 						}
+						TFTP.shrinkData(dataPacket);
 						TFTP.printPacket(dataPacket);
 
 						// Saves server TID on first iteration
-						if (firstIteration) {
+						if (firstIteration)
+						{
 							serverAddressTID = dataPacket.getAddress();
 							serverPortTID = dataPacket.getPort();
 							firstIteration = false;
 						}
 
-						// Generates data packet to client
+						// Sends data packet to client
 						DatagramPacket forwardedDataPacket = TFTP.formPacket(
 								clientAddressTID,
 								clientPortTID,
 								dataPacket.getData());
-						
-						// Modify the DATA Packet based on mode and block number selected
-						if (choices[0] == 2 && choices[2] == 2 && blockCount == choices[3])
-							forwardedDataPacket = tamperPacket(forwardedDataPacket, TFTP.READ_OP_CODE,
-									clientAddressTID, clientPortTID);
-						
-						// Sends data packet to client
+						tamperPacket(forwardedDataPacket, RECEIVED_FROM_SERVER);
+						spawnUnknownTIDThread(forwardedDataPacket, clientAddressTID, clientPortTID);
 						TFTP.printPacket(forwardedDataPacket);
 						sendReceiveClientSocket.send(forwardedDataPacket);
 
@@ -435,36 +588,34 @@ public class ErrorSimulator {
 						TFTP.shrinkData(ackPacket);
 						TFTP.printPacket(ackPacket);
 
-						// Generate acknowledgement packet to server
+						// Sends acknowledgement packet to server
 						DatagramPacket forwardedAckPacket = TFTP.formPacket(
 								serverAddressTID,
 								serverPortTID,
 								ackPacket.getData());
-						
-						// Modify the ACK Packet based on mode and block number selected
-						if (choices[0] == 2 && choices[2] == 1 && blockCount == choices[3])
-							forwardedAckPacket = tamperPacket(forwardedAckPacket, TFTP.READ_OP_CODE,
-									serverAddressTID, serverPortTID);
-
-						// Sends acknowledgement packet to server
+						tamperPacket(forwardedAckPacket, RECEIVED_FROM_CLIENT);
+						spawnUnknownTIDThread(forwardedAckPacket, serverAddressTID, serverPortTID);
 						TFTP.printPacket(forwardedAckPacket);
 						sendReceiveServerSocket.send(forwardedAckPacket);
-						
-						blockCount++;
 
-						// Transfer is complete if server sends back an error packet
-						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE) {
+						// Transfer is complete if client sends back an error packet
+						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE)
+						{
 							errorPacketReceived = true;
 							transferComplete = true;
 							break;
 						}
 					}
 					System.out.println("Connection terminated.\n");
-				} finally {
+				}
+				finally
+				{
 					sendReceiveClientSocket.close();
 					sendReceiveServerSocket.close();
 				}
-			} catch (IOException e) {
+			}
+			catch (IOException e)
+			{
 				e.printStackTrace();
 			}
 		}
@@ -473,33 +624,36 @@ public class ErrorSimulator {
 	/**
 	 * Thread used to handle client write transfers
 	 */
-	class WriteTransferHandler implements Runnable {
-		DatagramPacket clientRequestPacket;
+	class WriteTransferHandler implements Runnable
+	{
+		private DatagramPacket clientRequestPacket;
 
-		public WriteTransferHandler(DatagramPacket clientRequestPacket) {
+		public WriteTransferHandler(DatagramPacket clientRequestPacket)
+		{
 			this.clientRequestPacket = clientRequestPacket;
 		}
 
-		public void run() {
-			try {
+		public void run()
+		{
+			try
+			{
 				// Socket used for sending and receiving packets from server
 				DatagramSocket sendReceiveServerSocket = new DatagramSocket();
 
 				// Socket used for sending and receiving packets from client
 				DatagramSocket sendReceiveClientSocket = new DatagramSocket();
 
+				// Flag set when error packet is received
+				boolean errorPacketReceived = false;
+				
 				// Creates a DatagramPacket to send request to server
 				DatagramPacket serverRequestPacket = TFTP.formPacket(
 						InetAddress.getLocalHost(),
 						SEND_PORT,
 						clientRequestPacket.getData());
-				
-				// Modify the WRQ if corresponding mode is selected
-				if (choices[0] == 1)
-					serverRequestPacket = tamperPacket(clientRequestPacket, TFTP.WRITE_OP_CODE,
-							serverRequestPacket.getAddress(), SEND_PORT);
 
 				// Sends request packet through socket
+				tamperPacket(serverRequestPacket, RECEIVED_FROM_CLIENT);
 				TFTP.printPacket(serverRequestPacket);
 				sendReceiveServerSocket.send(serverRequestPacket);
 
@@ -511,9 +665,10 @@ public class ErrorSimulator {
 				TFTP.shrinkData(firstAckPacket);
 				TFTP.printPacket(firstAckPacket);
 
-				// End transfer if last packet received was an error packet
-				if (TFTP.getOpCode(firstAckPacket) == TFTP.ERROR_OP_CODE) {
-					System.out.println("Connection terminated.\n");
+				// Transfer if server sends back an error packet
+				if (TFTP.getOpCode(firstAckPacket) == TFTP.ERROR_OP_CODE)
+				{
+					errorPacketReceived = true;
 				}
 
 				// Saves the client TID
@@ -529,63 +684,57 @@ public class ErrorSimulator {
 						clientAddressTID,
 						clientPortTID,
 						firstAckPacket.getData());
-				
-				// Modify the first ACK Packet if specific modes are selected --> choices[] == {2, 1-4, 2, 0}
-				if (choices[0] == 2 && choices[1] != 0 && choices[2] == 2 && choices[3] == 0)
-					forwardedFirstAckPacket = tamperPacket(forwardedFirstAckPacket, TFTP.WRITE_OP_CODE,
-							clientAddressTID, clientPortTID);
-				
+				tamperPacket(forwardedFirstAckPacket, RECEIVED_FROM_SERVER);
+				spawnUnknownTIDThread(forwardedFirstAckPacket, clientAddressTID, clientPortTID);
 				TFTP.printPacket(forwardedFirstAckPacket);
 				sendReceiveClientSocket.send(forwardedFirstAckPacket);
-				
+
 				// Flag set when transfer is finished
 				boolean transferComplete = false;
-				
-				// Flag set when error packet is received
-				boolean errorPacketReceived = false;
-				
-				// Transfer is complete if server sends back an error packet
-				if (TFTP.getOpCode(firstAckPacket) == TFTP.ERROR_OP_CODE) {
-					//System.out.println("Connection terminated.\n");
+
+				// End transfer if last packet received was an error packet
+				if (errorPacketReceived)
+				{
 					transferComplete = true;
 				}
 
-				try {
-					while (!transferComplete) {
+				try
+				{
+					while (!transferComplete)
+					{
 						// Creates a DatagramPacket to receive data packet from client
 						DatagramPacket dataPacket = TFTP.formPacket();
 
 						// Receives data packet from client
 						sendReceiveClientSocket.receive(dataPacket);
-						
-						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE) {
-							//System.out.println("Connection terminated.\n");
+
+						// Transfer if client sends back an error packet
+						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE)
+						{
 							errorPacketReceived = true;
 						}
-						
+
 						// Transfer is complete if data block is less than MAX_DATA_SIZE
-						if (dataPacket.getLength() < TFTP.MAX_PACKET_SIZE) {
+						if (dataPacket.getLength() < TFTP.MAX_DATA_SIZE)
+						{
 							transferComplete = true;
-							TFTP.shrinkData(dataPacket);
 						}
+						TFTP.shrinkData(dataPacket);
 						TFTP.printPacket(dataPacket);
 
-						// Generates data packet to server
+						// Sends data packet to server
 						DatagramPacket forwardedDataPacket = TFTP.formPacket(
 								serverAddressTID,
 								serverPortTID,
 								dataPacket.getData());
-						
-						// Modify the DATA Packet based on mode and block number selected
-						if (choices[0] == 2 && choices[2] == 2 && blockCount == choices[3])
-							forwardedDataPacket = tamperPacket(forwardedDataPacket, TFTP.WRITE_OP_CODE,
-									serverAddressTID, serverPortTID);
-						
-						// Sends data packet to server
+						tamperPacket(forwardedDataPacket, RECEIVED_FROM_CLIENT);
+						spawnUnknownTIDThread(forwardedDataPacket, serverAddressTID, serverPortTID);
 						TFTP.printPacket(forwardedDataPacket);
 						sendReceiveServerSocket.send(forwardedDataPacket);
-						
-						if (errorPacketReceived) {
+
+						// End transfer if last packet received was an error packet
+						if (errorPacketReceived)
+						{
 							transferComplete = true;
 							break;
 						}
@@ -598,35 +747,33 @@ public class ErrorSimulator {
 						TFTP.shrinkData(ackPacket);
 						TFTP.printPacket(ackPacket);
 
-						// Generates acknowledgement packet to client
+						// Sends acknowledgement packet to client
 						DatagramPacket forwardedAckPacket = TFTP.formPacket(
 								clientAddressTID,
 								clientPortTID,
 								ackPacket.getData());
-						
-						// Modify the ACK Packet based on mode and block number selected
-						if (choices[0] == 2 && choices[2] == 1 && blockCount == choices[3])
-							forwardedAckPacket = tamperPacket(forwardedAckPacket, TFTP.WRITE_OP_CODE,
-									clientAddressTID, clientPortTID);
-						
-						// Sends acknowledgement packet to client
+						tamperPacket(forwardedAckPacket, RECEIVED_FROM_SERVER);
+						spawnUnknownTIDThread(forwardedAckPacket, clientAddressTID, clientPortTID);
 						TFTP.printPacket(forwardedAckPacket);
 						sendReceiveClientSocket.send(forwardedAckPacket);
-						
-						blockCount++;
 
 						// Transfer is complete if server sends back an error packet
-						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE) {
+						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE)
+						{
 							transferComplete = true;
 							break;
 						}
 					}
 					System.out.println("Connection terminated.\n");
-				} finally {
+				}
+				finally
+				{
 					sendReceiveClientSocket.close();
 					sendReceiveServerSocket.close();
 				}
-			} catch (IOException e) {
+			}
+			catch (IOException e)
+			{
 				e.printStackTrace();
 			}
 		}
@@ -635,19 +782,23 @@ public class ErrorSimulator {
 	/**
 	 * Thread used to handle unknown TID transfers
 	 */
-	class UnknownTIDTransferHandler implements Runnable {
+	class UnknownTIDTransferHandler implements Runnable
+	{
 		private DatagramPacket packet;
 		private InetAddress addressTID;
 		private int portTID;
 
-		public UnknownTIDTransferHandler(DatagramPacket packet, InetAddress addressTID, int portTID) {
+		public UnknownTIDTransferHandler(DatagramPacket packet, InetAddress addressTID, int portTID)
+		{
 			this.packet = packet;
 			this.addressTID = addressTID;
 			this.portTID = portTID;
 		}
 
-		public void run() {
-			try {
+		public void run()
+		{
+			try
+			{
 				// New socket with a different TID than the currently ongoing transfer
 				DatagramSocket socket = new DatagramSocket();
 
@@ -660,7 +811,8 @@ public class ErrorSimulator {
 				boolean unexpectedPacket;
 				
 				// Continue to receive packets until the correct packet is received
-				do {
+				do
+				{
 					unexpectedPacket = false;
 
 					// Receives invalid TID error packet
@@ -671,17 +823,25 @@ public class ErrorSimulator {
 					// Check if the address and port of the received packet match the TID
 					InetAddress packetAddress = errorPacket.getAddress();
 					int packetPort = errorPacket.getPort();
-					if (!(packetAddress.equals(addressTID) && (packetPort == portTID))) {
+					if (!(	packetAddress.equals(addressTID) &&
+							(packetPort == portTID)	))
+					{
 						unexpectedPacket = true;
-					} else if (!TFTP.verifyErrorPacket(errorPacket)) {
+					}
+					else if (!TFTP.verifyErrorPacket(errorPacket))
+					{
 						unexpectedPacket = true;
-					} else if (TFTP.getErrorCode(errorPacket) != TFTP.ERROR_CODE_UNKNOWN_TID) {
+					}
+					else if (TFTP.getErrorCode(errorPacket) != TFTP.ERROR_CODE_UNKNOWN_TID)
+					{
 						unexpectedPacket = true;
 					}
 				} while (unexpectedPacket);
 
 				socket.close();
-			} catch (IOException e) {
+			}
+			catch (IOException e)
+			{
 				e.printStackTrace();
 				return;
 			}
