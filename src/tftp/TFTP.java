@@ -15,7 +15,7 @@ import java.io.*;
  * files, and some block manipulation algorithm.
  * 
  * @author Team 4
- * @version Iteration 1
+ * @version Iteration 3
  */
 public class TFTP {
 	public static final int BUF_SIZE = 100;
@@ -34,6 +34,8 @@ public class TFTP {
 	public static final int ERROR_CODE_FILE_NOT_FOUND = 1;
 	public static final int ERROR_CODE_ACCESS_VIOLATION = 2;
 	public static final int ERROR_CODE_DISK_FULL = 3;
+	public static final int ERROR_CODE_ILLEGAL_TFTP_OPERATION = 4;
+	public static final int ERROR_CODE_UNKNOWN_TID = 5;
 	public static final int ERROR_CODE_NO_SUCH_USER = 7;
 	public static final int MIN_PORT = 1;
 	public static final int MAX_PORT = 65535;
@@ -223,7 +225,7 @@ public class TFTP {
 		byte[] data = packet.getData();
 		System.arraycopy(data,0,opCodeBytes,0,OP_CODE_SIZE);
 		int opCode = toUnsignedInt(opCodeBytes[1]);
-		if (!isValidOpCode(opCode))  throw new IllegalArgumentException("DatagramPacket is not a valid TFTP packet.");
+		//if (!isValidOpCode(opCode))  throw new IllegalArgumentException("DatagramPacket is not a valid TFTP packet.");
 		return opCode;
 	}
 
@@ -508,9 +510,19 @@ public class TFTP {
 			offset.incrementOffset(1);
 
 			// Check for text data (file name)
+			int fileNameStartOffset = offset.getOffset();
 			while (data[offset.getOffset()] != 0)
 			{
 				offset.incrementOffset(1);
+			}
+
+			// Calculates the fileName length using the offset
+			int fileNameLength = offset.getOffset() - fileNameStartOffset;
+
+			// Immediately return false if the length of the fileName is 0
+			if (fileNameLength == 0)
+			{
+				return false;
 			}
 
 			// Check if next byte is 0
@@ -553,12 +565,18 @@ public class TFTP {
 			{
 				return false;
 			}
+			offset.incrementOffset(1);
+
+			// Check if the final position of the offset is at the last data byte
+			if (offset.getOffset() != dataLength)
+			{
+				return false;
+			}
 
 			return true;
 		}
 		catch (IndexOutOfBoundsException e)
 		{
-			//System.err.println("IndexOutOfBoundsException");
 			return false;
 		}
 	}
@@ -575,6 +593,12 @@ public class TFTP {
 
 		try
 		{
+			// Check if the data packet is a valid size
+			if (dataLength > MAX_PACKET_SIZE)
+			{
+				return false;
+			}
+
 			// Check if first byte is 0
 			if (data[offset.getOffset()] != 0)
 			{
@@ -609,7 +633,6 @@ public class TFTP {
 		}
 		catch (IndexOutOfBoundsException e)
 		{
-			System.err.println("IndexOutOfBoundsException");
 			return false;
 		}
 	}
@@ -621,11 +644,17 @@ public class TFTP {
 
 		// Stores the data that we are checking against
 		byte data[] = packet.getData();
-		int dataLength = 4;
+		int dataLength = data.length;
 		CheckedOffset offset = new CheckedOffset(dataLength);
 
 		try
 		{
+			// Check if the ack packet is a valid size
+			if (dataLength != 4)
+			{
+				return false;
+			}
+
 			// Check if first byte is 0
 			if (data[offset.getOffset()] != 0)
 			{
@@ -660,7 +689,6 @@ public class TFTP {
 		}
 		catch (IndexOutOfBoundsException e)
 		{
-			System.err.println("IndexOutOfBoundsException");
 			return false;
 		}
 	}
@@ -717,11 +745,16 @@ public class TFTP {
 			}
 			offset.incrementOffset(1);
 
+			// Check if the final position of the offset is at the last data byte
+			if (offset.getOffset() != dataLength)
+			{
+				return false;
+			}
+
 			return true;
 		}
 		catch (IndexOutOfBoundsException e)
 		{
-			System.err.println("IndexOutOfBoundsException");
 			return false;
 		}
 	}
@@ -889,12 +922,15 @@ public class TFTP {
 		int operation = getOpCode(packet);
 		System.out.println("===== Packet Info =====");
 		System.out.println("Port = " + packet.getPort());
-		System.out.println("Type = " + opCodeToString(operation));
+		try { System.out.println("Type = " + opCodeToString(operation)); }
+		catch (UnsupportedOperationException e) { System.out.println("Type = Unknown"); }
 		switch(operation) {
 			case READ_OP_CODE:
 			case WRITE_OP_CODE:
-				System.out.println("File name = " + parseRQ(packet).getFileName());
-				System.out.println("Mode = " + parseRQ(packet).getMode());
+				try { System.out.println("File name = " + parseRQ(packet).getFileName()); }
+				catch (IllegalArgumentException e) { System.out.println("File name = Unknown"); }
+				try { System.out.println("Mode = " + parseRQ(packet).getMode()); }
+				catch (IllegalArgumentException e) { System.out.println("Mode = Unknown"); }
 				break;
 			case DATA_OP_CODE:
 			case ACK_OP_CODE:
@@ -904,7 +940,8 @@ public class TFTP {
 				System.out.println("Error message = " + getErrorMessage(packet));
 				break;
 			default:
-				throw new UnsupportedOperationException();
+				//throw new UnsupportedOperationException();
+				break;
 		}
 		System.out.println("Data = " + Arrays.toString(packet.getData()) + "\n");
 	}
