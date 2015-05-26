@@ -454,6 +454,743 @@ public class TFTPTest {
 		}
 	}
 
+	//public static boolean verifyRequestPacket(DatagramPacket packet)
+	@Test
+	public void VerifyRequestPacketTest1()
+	{
+		try
+		{
+			String operation = "r";
+			String fileName = "server.txt";
+			String mode = "netascii";
+			DatagramPacket packet = TFTP.formRQPacket(
+					InetAddress.getLocalHost(),
+					69,
+					operation,
+					fileName,
+					mode);
+
+			assertTrue(TFTP.verifyRequestPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyRequestPacketTest2()
+	{
+		try
+		{
+			String operation = "w";
+			String fileName = "server.txt";
+			String mode = "neTascii";
+			DatagramPacket packet = TFTP.formRQPacket(
+					InetAddress.getLocalHost(),
+					69,
+					operation,
+					fileName,
+					mode);
+
+			assertTrue(TFTP.verifyRequestPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyRequestPacketTest3()
+	{
+		try
+		{
+			String operation = "r";
+			String fileName = "server.txt";
+			String mode = "octet";
+			DatagramPacket packet = TFTP.formRQPacket(
+					InetAddress.getLocalHost(),
+					69,
+					operation,
+					fileName,
+					mode);
+
+			assertTrue(TFTP.verifyRequestPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyRequestPacketTest4()
+	{
+		try
+		{
+			String operation = "r";
+			String fileName = "server.txt";
+			String mode = "oCtEt";
+			DatagramPacket packet = TFTP.formRQPacket(
+					InetAddress.getLocalHost(),
+					69,
+					operation,
+					fileName,
+					mode);
+
+			assertTrue(TFTP.verifyRequestPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyRequestPacketTest5()
+	{
+		try
+		{
+			String operation = "r";
+			String fileName = "server.txt";
+			String mode = "netas";
+			DatagramPacket packet = TFTP.formRQPacket(
+					InetAddress.getLocalHost(),
+					69,
+					operation,
+					fileName,
+					mode);
+
+			assertFalse(TFTP.verifyRequestPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyRequestPacketTest6()
+	{
+		try
+		{
+			String operation = "r";
+			String fileName = "";
+			String mode = "netascii";
+			DatagramPacket packet = TFTP.formRQPacket(
+					InetAddress.getLocalHost(),
+					69,
+					operation,
+					fileName,
+					mode);
+
+			assertFalse(TFTP.verifyRequestPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyRequestPacketTest7()
+	{
+		try
+		{
+			byte[] dataBuf = {1, 0, 65, 0, 111, 99, 116, 101, 116, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyRequestPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyRequestPacketTest8()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 3, 65, 0, 111, 99, 116, 101, 116, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyRequestPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyRequestPacketTest9()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 1, 65, 0, 111, 99, 116, 101, 116};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyRequestPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyRequestPacketTest10()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 1, 65, 0, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyRequestPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyRequestPacketTest11()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 1, 65, 0, 111, 99, 116, 101, 116, 0, 3};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyRequestPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyRequestPacketTest12()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 1, 65, 0, 111, 99, 116, 101, 116, 0, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyRequestPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	//public static boolean verifyDataPacket(DatagramPacket packet, int blockNumber)
+	@Test
+	public void VerifyDataPacketTest1()
+	{
+		try
+		{
+			int blockNumber = 0;
+			DatagramPacket packet = TFTP.formDATAPacket(
+					InetAddress.getLocalHost(),
+					69,
+					blockNumber,
+					new byte[0]);
+
+			assertTrue(TFTP.verifyDataPacket(packet, blockNumber));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyDataPacketTest2()
+	{
+		try
+		{
+			int blockNumber = 65535;
+			DatagramPacket packet = TFTP.formDATAPacket(
+					InetAddress.getLocalHost(),
+					69,
+					blockNumber,
+					new byte[0]);
+
+			assertTrue(TFTP.verifyDataPacket(packet, blockNumber));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyDataPacketTest3()
+	{
+		try
+		{
+			byte[] data = {0, 3, 0, 0, 127};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					data);
+
+			assertTrue(TFTP.verifyDataPacket(packet, 0));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyDataPacketTest4()
+	{
+		try
+		{
+			byte[] data = {1, 3, 0, 0, 127};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					data);
+
+			assertFalse(TFTP.verifyDataPacket(packet, 0));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyDataPacketTest5()
+	{
+		try
+		{
+			byte[] data = {0, 4, 0, 0, 127};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					data);
+
+			assertFalse(TFTP.verifyDataPacket(packet, 0));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyDataPacketTest6()
+	{
+		try
+		{
+			byte[] data = {0, 3, 1, 0, 127};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					data);
+
+			assertFalse(TFTP.verifyDataPacket(packet, 0));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyDataPacketTest7()
+	{
+		try
+		{
+			byte[] data = {0, 3, 0, 1, 127};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					data);
+
+			assertFalse(TFTP.verifyDataPacket(packet, 0));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyDataPacketTest9()
+	{
+		try
+		{
+			byte[] data = new byte[TFTP.MAX_PACKET_SIZE];
+			data[0] = 0;
+			data[1] = TFTP.DATA_OP_CODE;
+			data[2] = 0;
+			data[3] = 0;
+			for (int i=4; i<data.length; i++)
+			{
+				data[i] = 1;
+			}
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					data);
+
+			assertTrue(TFTP.verifyDataPacket(packet, 0));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyDataPacketTest10()
+	{
+		try
+		{
+			byte[] data = new byte[TFTP.MAX_PACKET_SIZE + 1];
+			data[0] = 0;
+			data[1] = TFTP.DATA_OP_CODE;
+			data[2] = 0;
+			data[3] = 0;
+			for (int i=4; i<data.length; i++)
+			{
+				data[i] = 1;
+			}
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					data);
+
+			assertFalse(TFTP.verifyDataPacket(packet, 0));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	// Returns true if acknowledgement packet matches TFTP specifications
+	@Test
+	public void VerifyAckPacketTest1()
+	{
+		try
+		{
+			int blockNumber = 0;
+			DatagramPacket packet = TFTP.formACKPacket(
+					InetAddress.getLocalHost(),
+					69,
+					blockNumber);
+
+			assertTrue(TFTP.verifyAckPacket(packet, blockNumber));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyAckPacketTest2()
+	{
+		try
+		{
+			int blockNumber = 65535;
+			DatagramPacket packet = TFTP.formACKPacket(
+					InetAddress.getLocalHost(),
+					69,
+					blockNumber);
+
+			assertTrue(TFTP.verifyAckPacket(packet, blockNumber));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyAckPacketTest3()
+	{
+		try
+		{
+			byte[] dataBuf = {1, 4, 0, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyAckPacket(packet, 0));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyAckPacketTest4()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 3, 0, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyAckPacket(packet, 0));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyAckPacketTest5()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 4, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyAckPacket(packet, 0));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyAckPacketTest6()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 4, 0, 0, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyAckPacket(packet, 0));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	//public static boolean verifyErrorPacket(DatagramPacket packet)
+	@Test
+	public void VerifyErrorPacketTest1()
+	{
+		try
+		{
+			int errorCode = TFTP.ERROR_CODE_NOT_DEFINED;
+			String message = "Undefined error";
+			DatagramPacket packet = TFTP.formERRORPacket(
+					InetAddress.getLocalHost(),
+					69,
+					errorCode,
+					message);
+
+			assertTrue(TFTP.verifyErrorPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyErrorPacketTest2()
+	{
+		try
+		{
+			int errorCode = TFTP.ERROR_CODE_NO_SUCH_USER;
+			String message = "No such user error";
+			DatagramPacket packet = TFTP.formERRORPacket(
+					InetAddress.getLocalHost(),
+					69,
+					errorCode,
+					message);
+
+			assertTrue(TFTP.verifyErrorPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyErrorPacketTest3()
+	{
+		try
+		{
+			// Invalid error code
+			int errorCode = TFTP.ERROR_CODE_NO_SUCH_USER + 1;
+			String message = "Invalid error code";
+			DatagramPacket packet = TFTP.formERRORPacket(
+					InetAddress.getLocalHost(),
+					69,
+					errorCode,
+					message);
+
+			assertFalse(TFTP.verifyErrorPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyErrorPacketTest4()
+	{
+		try
+		{
+			byte[] dataBuf = {1, 5, 0, 1, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyErrorPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyErrorPacketTest5()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 4, 0, 1, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyErrorPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyErrorPacketTest6()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 5, 1, 1, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyErrorPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyErrorPacketTest7()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 5, 0, 1, 8, 8};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyErrorPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyErrorPacketTest8()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 5, 0, 1, 8, 8, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertTrue(TFTP.verifyErrorPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void VerifyErrorPacketTest9()
+	{
+		try
+		{
+			byte[] dataBuf = {0, 5, 0, 1, 8, 8, 0, 0};
+			DatagramPacket packet = TFTP.formPacket(
+					InetAddress.getLocalHost(),
+					69,
+					dataBuf);
+
+			assertFalse(TFTP.verifyErrorPacket(packet));
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
 	//public static String getErrorMessage(DatagramPacket packet)
 	@Test
 	public void getErrorMessageTest1() {

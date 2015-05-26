@@ -122,6 +122,24 @@ public class TFTP {
 		return new DatagramPacket(data,currentIndex+1, addr, port);
 	}
 
+	public static DatagramPacket formRQPacket(InetAddress addr, int port, String operation, String fileName, String mode) {
+		Request.Type operationType;
+		if (operation.equals("r"))
+		{
+			operationType = Request.Type.READ;
+		}
+		else if (operation.equals("w"))
+		{
+			operationType = Request.Type.WRITE;
+		}
+		else
+		{
+			throw new UnsupportedOperationException();
+		}
+		Request r = new Request(operationType, fileName, mode);
+		return formRQPacket(addr, port, r);
+	}
+
 	/**
 	 * Given a filename, returns a queue of datagram packets for that
 	 * file in 512 byte blocks.
@@ -379,7 +397,7 @@ public class TFTP {
 	 *
 	 * @return The respective DATA packet formed with given inputs.
 	 */
-	private static DatagramPacket formDATAPacket(InetAddress addr, int port, int blockNumber, byte[] data) {
+	public static DatagramPacket formDATAPacket(InetAddress addr, int port, int blockNumber, byte[] data) {
 		// 4+data.length because 2 bytes for op code and 2 bytes for blockNumber
 		byte[] buf = new byte[OP_CODE_SIZE + BLOCK_NUMBER_SIZE +data.length];
 
