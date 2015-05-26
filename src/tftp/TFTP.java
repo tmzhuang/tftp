@@ -49,10 +49,10 @@ public class TFTP {
 	 * Forms a DatagramPacket with an empty data buffer large enough to hold the maximum
 	 * packet size
 	 *
-	 * @return DatagramPacket with an empty data buffer of size MAX_PACKET_SIZE
+	 * @return DatagramPacket with an empty data buffer of size MAX_PACKET_SIZE + 1
 	 */
 	public static DatagramPacket formPacket() {
-		byte[] data = new byte[MAX_PACKET_SIZE];
+		byte[] data = new byte[MAX_PACKET_SIZE + 1];
 		return new DatagramPacket(data, data.length);
 	}
 
@@ -120,6 +120,24 @@ public class TFTP {
 		System.arraycopy(buf,0,data,0,currentIndex+1);
 
 		return new DatagramPacket(data,currentIndex+1, addr, port);
+	}
+
+	public static DatagramPacket formRQPacket(InetAddress addr, int port, String operation, String fileName, String mode) {
+		Request.Type operationType;
+		if (operation.equals("r"))
+		{
+			operationType = Request.Type.READ;
+		}
+		else if (operation.equals("w"))
+		{
+			operationType = Request.Type.WRITE;
+		}
+		else
+		{
+			throw new UnsupportedOperationException();
+		}
+		Request r = new Request(operationType, fileName, mode);
+		return formRQPacket(addr, port, r);
 	}
 
 	/**
@@ -379,7 +397,7 @@ public class TFTP {
 	 *
 	 * @return The respective DATA packet formed with given inputs.
 	 */
-	private static DatagramPacket formDATAPacket(InetAddress addr, int port, int blockNumber, byte[] data) {
+	public static DatagramPacket formDATAPacket(InetAddress addr, int port, int blockNumber, byte[] data) {
 		// 4+data.length because 2 bytes for op code and 2 bytes for blockNumber
 		byte[] buf = new byte[OP_CODE_SIZE + BLOCK_NUMBER_SIZE +data.length];
 
@@ -965,7 +983,7 @@ public class TFTP {
 	}
 
 	// Converts the OPCODE to it's string representation
-	private static String opCodeToString(int operation) {
+	public static String opCodeToString(int operation) {
 		switch(operation) {
 			case READ_OP_CODE:
 				return "Read";

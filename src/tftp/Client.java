@@ -13,9 +13,9 @@ import java.util.*;
 public class Client implements Exitable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
-	//private static int SEND_PORT = 68;
+	private static int SEND_PORT = 68;
 	//private static int SEND_PORT = 69;
-	private static int SEND_PORT = 32001;
+	//private static int SEND_PORT = 32001;
 	//private static int SEND_PORT = 32002;
 	private InetAddress replyAddr;
 	private int TID;
@@ -63,6 +63,8 @@ public class Client implements Exitable {
 			if (verbose) System.out.println("Waiting for ACK0...");
 			sendReceiveSocket.receive(receivePacket);
 			TFTP.shrinkData(receivePacket);
+			this.replyAddr = receivePacket.getAddress();
+			this.TID = receivePacket.getPort();
 
 			// This block is entered if the packet received is not a valid ACK packet
 			if (!TFTP.verifyAckPacket(receivePacket, 0)) {
@@ -93,8 +95,6 @@ public class Client implements Exitable {
 			}
 
 			if (verbose) System.out.println("ACK0 received.");
-			this.replyAddr = receivePacket.getAddress();
-			this.TID = receivePacket.getPort();
 		} catch(Exception e) {
 			System.out.println(e.getMessage());
 			return;
@@ -250,7 +250,6 @@ public class Client implements Exitable {
 								"The address and port of the packet does not match the TID of the ongoing transfer.");
 
 						// Sends error packet
-						TFTP.printPacket(errorPacket);
 						sendReceiveSocket.send(errorPacket);
 
 						// Echo error message
