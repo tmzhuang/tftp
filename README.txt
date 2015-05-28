@@ -1,7 +1,7 @@
 SYSC 3303 Group Project
 ========================
 
-(last modified README.txt May 19, 2015)
+(last modified README.txt May 28, 2015)
 
 
 Group 4, Iteration 2
