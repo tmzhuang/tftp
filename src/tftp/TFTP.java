@@ -1027,4 +1027,19 @@ public class TFTP {
 			}
 		}
 	}
+
+
+	/**
+	 * Returns true if packet1 has the same data as packet2 and false otherwise.
+	 *
+	 * @param packet1 A DatagramPacket
+	 * @param packet2 A DatagramPacket
+	 *
+	 * @return True is packet1 has the same data as packet2 and false otherwise.
+	 */
+	public static boolean hasSameData(DatagramPacket packet1, DatagramPacket packet2) {
+		byte[] packet1Data = packet1.getData();
+		byte[] packet2Data = packet2.getData();
+		return Arrays.equals(packet1Data, packet2Data);
+	}
 }
