@@ -466,7 +466,7 @@ public class Server implements Exitable {
 					}
 					
 					// Form a ACK packet to respond with
-					ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
+					ackPacket = TFTP.formACKPacket(replyAddr, TID, TFTP.getBlockNumber(receivePacket));
 					if (verbose) System.out.println("Sending ACK" + TFTP.getBlockNumber(ackPacket) + ".");
 					socket.send(ackPacket);
 					

@@ -401,7 +401,7 @@ public class Client implements Exitable {
 			}
 				
 				// Form an ACK packet to respond with and send
-				DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
+				DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, TFTP.getBlockNumber(dataPacket));
 				if (verbose) System.out.println("ACK " + TFTP.getBlockNumber(ackPacket) + " sent.");
 				sendReceiveSocket.send(ackPacket);
 				
