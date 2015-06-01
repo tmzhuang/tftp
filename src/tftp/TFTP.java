@@ -658,8 +658,8 @@ public class TFTP {
 			int parsedBlockNumber = toUnsignedInt(msb_blockNumber)*256 +
 									toUnsignedInt(lsb_blockNumber);
 
-			// Check if block numbers match
-			if (parsedBlockNumber != blockNumber)
+			// Check if block number is larger than the currently 
+			if (parsedBlockNumber > blockNumber)
 			{
 				return false;
 			}
@@ -714,8 +714,8 @@ public class TFTP {
 			int parsedBlockNumber = toUnsignedInt(msb_blockNumber)*256 +
 									toUnsignedInt(lsb_blockNumber);
 
-			// Check if block numbers match
-			if (parsedBlockNumber != blockNumber)
+			// Check if block number is greater than the number currently being sent (if smaller it is dealt with as a delay)
+			if (parsedBlockNumber > blockNumber)
 			{
 				return false;
 			}
@@ -792,6 +792,29 @@ public class TFTP {
 		{
 			return false;
 		}
+	}
+	
+	//Returns true if the block number of the packet is the current block number expected in the transfer
+	public static boolean checkPacketInOrder(DatagramPacket packet, int blockNumber)
+	{
+		// Stores the data that we are checking against
+		byte data[] = packet.getData();
+		
+		// Saves the two block number bytes
+		byte msb_blockNumber = data[2];
+		byte lsb_blockNumber = data[3];
+		
+		int parsedBlockNumber = toUnsignedInt(msb_blockNumber)*256 +
+				toUnsignedInt(lsb_blockNumber);
+		
+		if(parsedBlockNumber == blockNumber)
+		{
+			return true;
+		}
+		else
+			return false;
+		
+		
 	}
 
 	/**
