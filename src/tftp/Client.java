@@ -21,6 +21,9 @@ public class Client implements Exitable {
 	private int TID;
 	private String directory;
 
+	//Maximum number of times to try re-send packet without response: 3
+	private static int RESEND_LIMIT = 3;
+
 	/**
 	 * Constructor for Client class, initialize a new socket upon called.
 	 */
@@ -28,6 +31,9 @@ public class Client implements Exitable {
 		// Create data socket for communicating with server
 		try {
 			sendReceiveSocket = new DatagramSocket();
+			
+			//Maximum time to wait for response before timeout and re-send packet: 2 seconds (2000)
+			sendReceiveSocket.setSoTimeout(2000);		
 		} catch(Exception se) {
 			se.printStackTrace();
 			System.exit(1);
@@ -45,23 +51,38 @@ public class Client implements Exitable {
 	 * @param mode Mode of the transfer i.e Netascii, octet, etc.
 	 */
 	public void write(InetAddress addr, String filePath, String mode) {
+		try {
 		// Make request packet and send
 		if (verbose) System.out.println("Sending WRITE request\n");
 		Request r = new Request(Request.Type.WRITE, filePath, mode);
 		DatagramPacket requestPacket = TFTP.formRQPacket(addr, SEND_PORT, r);
-		try {
-			sendReceiveSocket.send(requestPacket);
-		} catch(Exception e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
+		
+		sendReceiveSocket.send(requestPacket);
 
+		boolean packetInOrder = false;
+			
 		// Wait for ACK0
-		try {
-			// Get a packet from server
-			DatagramPacket receivePacket = TFTP.formPacket();
-			if (verbose) System.out.println("Waiting for ACK0...");
-			sendReceiveSocket.receive(receivePacket);
+		do{
+			try {
+				// Get a packet from server
+				DatagramPacket receivePacket = TFTP.formPacket();
+				if (verbose) System.out.println("Waiting for ACK0...");
+			
+				for(int i = 0; i<RESEND_LIMIT; i++) {
+					try {
+						sendReceiveSocket.receive(receivePacket);
+						i = RESEND_LIMIT+1;		//packet successfully received, leave loop
+					} catch(SocketTimeoutException e) {
+						//if re-send attempt limit reached, 'give up' and cancel transfer
+						if(i == RESEND_LIMIT-1) {
+							System.out.println("No response from server after " + RESEND_LIMIT + " attempts. Try again later.");
+							return;
+						}
+						//otherwise re-send
+						sendReceiveSocket.send(requestPacket);
+					}
+				}
+			
 			TFTP.shrinkData(receivePacket);
 			this.replyAddr = receivePacket.getAddress();
 			this.TID = receivePacket.getPort();
@@ -93,16 +114,21 @@ public class Client implements Exitable {
 					return;
 				}
 			}
+			
+			packetInOrder = TFTP.checkPacketInOrder(receivePacket, 0);
 
-			if (verbose) System.out.println("ACK0 received.");
+			if (verbose && packetInOrder) System.out.println("ACK0 received.");
 		} catch(Exception e) {
 			System.out.println(e.getMessage());
 			return;
 		}
 
+		} while(!packetInOrder);
+			
 		// Covert file into queue of datagram packets
 		if (verbose) System.out.println("Forming packet queue from file...");
 		Queue<DatagramPacket> dataPacketQueue = null;
+		int currentBlockNumber = 1;
 		try {
 			dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filePath);
 		} catch (FileNotFoundException e1) {
@@ -114,13 +140,15 @@ public class Client implements Exitable {
 		while (!dataPacketQueue.isEmpty()) {
 			// Send a packet
 			DatagramPacket currentPacket = dataPacketQueue.remove();
-			int currentBlockNumber = TFTP.getBlockNumber(currentPacket);
-			try {
+			
+			//Only update current block if the previous packet was the correct sequential packet (not duplicated/delayed)
+			if(packetInOrder){
+				currentBlockNumber = TFTP.getBlockNumber(currentPacket);
+			}
 				if (verbose) System.out.println("Sending DATA" + currentBlockNumber + ".");
 				//if (verbose) System.out.println("Block size is" + TFTP.getData(currentPacket).length + ".");
 				sendReceiveSocket.send(currentPacket);
-			} catch(Exception e) {
-			}
+
 
 			// Wait for ACK
 			try {
@@ -133,9 +161,25 @@ public class Client implements Exitable {
 
 				do {
 					unexpectedPacket = false;
+					
 					receivePacket = TFTP.formPacket();
 
-					sendReceiveSocket.receive(receivePacket);
+					for(int i = 0; i<RESEND_LIMIT+1; i++) {
+						try {
+								sendReceiveSocket.receive(receivePacket);
+								i = RESEND_LIMIT+1;		//packet successfully received, exit loop
+						} catch(SocketTimeoutException e) {
+							//System.out.println("Timed out, retrying");
+							//if re-send attempt limit reached, 'give up' and cancel transfer
+							if(i == RESEND_LIMIT) {
+								System.out.println("No response from server after " + RESEND_LIMIT + " attempts. Try again later.");
+								return;
+							}
+							//otherwise re-send
+								sendReceiveSocket.send(currentPacket);
+						}
+					}				
+					
 					TFTP.shrinkData(receivePacket);
 
 					InetAddress packetAddress = receivePacket.getAddress();
@@ -190,12 +234,19 @@ public class Client implements Exitable {
 					}
 				}
 
-				if (verbose) System.out.println("ACK" + currentBlockNumber + " received.");
+				packetInOrder = TFTP.checkPacketInOrder(receivePacket, currentBlockNumber);
+				
+				if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received.");
 			} catch(Exception e) {
 				System.out.println(e.getMessage());
 			}
 		}
 		System.out.println("End of file transfer.\n");
+		
+		} catch(Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
 	}
 	
 	/**
@@ -210,6 +261,7 @@ public class Client implements Exitable {
 	 */
 	public void read(InetAddress addr, String filePath, String mode) {
 		try {
+			
 			// Form request and send to server
 			Request r = new Request(Request.Type.READ,filePath,mode);
 			if (verbose) System.out.println("Sending a READ request to server for file \"" + r.getFileName() + "\".\n");
@@ -222,15 +274,38 @@ public class Client implements Exitable {
 
 			boolean firstIteration = true;
 			
+			boolean packetInOrder;
+			
+			//To hold most recently sent packet for possible re-sending if needed.
+			DatagramPacket previousPacket = requestPacket;
+			
 			int currentBlockNumber = 1;
 			byte[] fileBytes = new byte[0];
 			do {
 				// Make packet to receive DATA
 				dataPacket = TFTP.formPacket();
 
-				// Wait for DATA from server
+				// Wait for DATA from server. If no response within set timeout limit, re-send packet (up to maximum re-send limit)
 				if (verbose) System.out.println("Waiting for DATA packet from server...");
-				sendReceiveSocket.receive(dataPacket);
+				
+				for(int i = 0; i<RESEND_LIMIT; i = i+1) {
+					try {
+						//System.out.println("Waiting...  " + i);
+							sendReceiveSocket.receive(dataPacket);
+							i = RESEND_LIMIT+1;		//If packet successfully received, leave loop
+					} catch(SocketTimeoutException e) {
+						//if re-send attempt limit reached, 'give up' and cancel transfer
+						if(i == RESEND_LIMIT)
+						{
+							System.out.println("No response from server after " + RESEND_LIMIT + " attempts. Try again later.");
+							return;
+						}
+						//otherwise re-send
+						//	System.out.println("Timeout, resending. " + i);
+							sendReceiveSocket.send(previousPacket);
+					}
+				}
+				
 				TFTP.shrinkData(dataPacket);
 
 				// If this is the first DATA packet received, record the address and port
@@ -295,6 +370,10 @@ public class Client implements Exitable {
 					transferComplete = true;
 				}
 				
+				packetInOrder = TFTP.checkPacketInOrder(dataPacket, currentBlockNumber);
+				
+			//If the packet was the expected sequential block number in the transfer (not duplicated or delayed), write the data to the file
+			if(packetInOrder){
 				// Write data to file
 				if (verbose) System.out.println("Appending current block to filebytes.");
 				fileBytes = TFTP.appendData(dataPacket, fileBytes);
@@ -319,13 +398,20 @@ public class Client implements Exitable {
 					// Closes socket and aborts thread
 					return;
 				}
-
-				// Form a ACK packet to respond with
+			}
+				
+				// Form an ACK packet to respond with and send
 				DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
-				if (verbose) System.out.println("ACK " + currentBlockNumber + " sent.");
+				if (verbose) System.out.println("ACK " + TFTP.getBlockNumber(ackPacket) + " sent.");
 				sendReceiveSocket.send(ackPacket);
-				currentBlockNumber = (currentBlockNumber + 1) % 65536;
-
+				
+				
+				//Update the current block number only if the packet was not a duplicate/delayed
+				if(packetInOrder){
+					currentBlockNumber = (currentBlockNumber + 1) % 65536;
+					previousPacket = ackPacket;
+				}
+				
 				// Newline
 				if (verbose) System.out.println();
 			} while (!transferComplete);
@@ -356,7 +442,7 @@ public class Client implements Exitable {
 		// Sets the directory for the client
 		do {
 			badDirectory = false;
-			System.out.println("Please enter the directory that you want to use for the server files:");
+			System.out.println("Please enter the directory that you want to use for the client files:");
 			System.out.println("Must end with either a '/' or a '\\' to work");
 			directory = in.next();
 			char lastChar = directory.charAt(directory.length()-1);

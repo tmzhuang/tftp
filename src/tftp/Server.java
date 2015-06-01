@@ -16,6 +16,8 @@ public class Server implements Exitable {
 	private boolean verbose = true;
 	private boolean running = true;
 	private String directory;
+	private static int TIMEOUT = 2000; 	//Maximum time to wait for response before timeout and re-send packet: 2 seconds (2000ms)
+	private static int RESEND_LIMIT = 3; //Maximum number of times to try re-send packet without response: 3
 
 	/**
 	 * Constructor of the Server class
@@ -66,7 +68,7 @@ public class Server implements Exitable {
 		private int TID;
 		private DatagramPacket initialPacket;
 		private DatagramSocket socket;
-
+		
 		/**
 		 * Constructor of the class ClientHandler, initialize relevant
 		 * fields given the received packet and open up a new socket for
@@ -80,6 +82,8 @@ public class Server implements Exitable {
 			this.initialPacket = packet;
 			try {
 				this.socket = new DatagramSocket();
+
+				socket.setSoTimeout(TIMEOUT);	
 			} catch(Exception e) {
 				e.printStackTrace();
 				System.exit(1);
@@ -201,16 +205,16 @@ public class Server implements Exitable {
 				int currentBlockNumber = TFTP.getBlockNumber(currentPacket);
 				try {
 					if (verbose) System.out.println("Sending DATA block number " + currentBlockNumber + ".");
-					if (verbose) System.out.println("Block size is" + TFTP.getData(currentPacket).length + ".");
+					if (verbose) System.out.println("Block size is " + TFTP.getData(currentPacket).length + ".");
 					socket.send(currentPacket);
-				} catch(Exception e) {
-				}
+				} catch(Exception e) {}
 
 				// Wait for ACK
 				try {
 					// Flag set to true if an unexpected packet is received
 					boolean unexpectedPacket;
-
+					
+					
 					DatagramPacket receivePacket;
 					if (verbose) System.out.println("Waiting for ACK" + currentBlockNumber + "...");
 
@@ -220,13 +224,29 @@ public class Server implements Exitable {
 							unexpectedPacket = false;
 							receivePacket = TFTP.formPacket();
 
-							// Receives acknowledgement packet from client
-							socket.receive(receivePacket);
+							// Wait for acknowledgement packet from client
+							for(int i = 0; i<RESEND_LIMIT+1; i++) {
+								try {
+										socket.receive(receivePacket);
+										i = RESEND_LIMIT+1;		//If packet successfully received, leave loop
+								} catch(SocketTimeoutException e) {
+									//if re-send attempt limit reached, 'give up' and cancel transfer
+									if(i == RESEND_LIMIT) {
+										System.out.println("No response from client after " + RESEND_LIMIT + " attempts. Try again later.");
+										socket.close();
+										return;
+									}
+									//otherwise re-send
+										socket.send(currentPacket);
+								}
+							}
+							
 							TFTP.shrinkData(receivePacket);
-
-							// Check if the address and port of the received packet match the TID
+							
 							InetAddress packetAddress = receivePacket.getAddress();
 							int packetPort = receivePacket.getPort();
+							
+							// Check if the address and port of the received packet match the TID
 							if (!(packetAddress.equals(replyAddr) && (packetPort == TID))) {
 								// Creates an "unknown TID" error packet
 								DatagramPacket errorPacket = TFTP.formERRORPacket(
@@ -244,6 +264,7 @@ public class Server implements Exitable {
 								unexpectedPacket = true;
 								continue;
 							}
+							
 						} while (unexpectedPacket);
 
 						// This block is entered if the packet received is not a valid ACK packet
@@ -278,8 +299,14 @@ public class Server implements Exitable {
 							}
 						}
 
-					if (verbose) System.out.println("ACK" + currentBlockNumber + " received.");
-					currentBlockNumber = (currentBlockNumber + 1) % 65536;
+					if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received.");
+				
+					//if packet received is not the expected next ACK in the transfer (ie. a delayed or duplicate packet), ignore it 
+					//otherwise increment current block number to wait for the next ack
+					if(TFTP.checkPacketInOrder(receivePacket, currentBlockNumber))
+					{
+						currentBlockNumber = (currentBlockNumber + 1) % 65536;
+					}
 				} catch(Exception e) {
 					System.out.println(e.getMessage());
 				}
@@ -300,6 +327,8 @@ public class Server implements Exitable {
 				DatagramPacket receivePacket;
 				byte[] fileBytes = new byte[0];
 
+				boolean packetInOrder;
+				
 				// There is an error if the file exists and it not writable
 				if (TFTP.fileExists(filePath) && !TFTP.isWritable(filePath)) {
 					// Creates a "access violation" error packet
@@ -332,7 +361,25 @@ public class Server implements Exitable {
 					// Wait for a DATA packet
 					if (verbose) System.out.println("Waiting for DATA" + currentBlockNumber + "...");
 					receivePacket = TFTP.formPacket();
-					socket.receive(receivePacket);
+					
+					for(int i = 0; i<RESEND_LIMIT+1; i++) {
+						try {
+								socket.receive(receivePacket);
+								i = RESEND_LIMIT+1;		//If packet successfully received, leave loop
+						} catch(SocketTimeoutException e) {
+							System.out.println("Timed out, resending.");
+							//if re-send attempt limit reached, 'give up' and cancel transfer
+							if(i == RESEND_LIMIT) {
+								System.out.println("No response from server after " + RESEND_LIMIT + " attempts. Try again later.");
+								socket.close();
+								return;
+							}
+							//otherwise re-send
+								socket.send(ackPacket);
+						}
+					}
+					
+					
 					TFTP.shrinkData(receivePacket);
 
 					InetAddress packetAddress = receivePacket.getAddress();
@@ -386,39 +433,50 @@ public class Server implements Exitable {
 					}
 
 					// Echo successful data receive
-					if (verbose) System.out.println("DATA" + currentBlockNumber + "received.");
+					if (verbose) System.out.println("DATA" + TFTP.getBlockNumber(receivePacket) + " received.");
+					
+					packetInOrder = TFTP.checkPacketInOrder(receivePacket, currentBlockNumber);
+					
+					//If the packet was the correct next sequential packet in the transfer (not delayed/duplicated)
+					if(packetInOrder){
 
-					// Write the data packet to file
-					fileBytes = TFTP.appendData(receivePacket, fileBytes);
-					if ((fileBytes.length*TFTP.MAX_DATA_SIZE) > TFTP.getFreeSpaceOnFileSystem(directory)) {
-						// Creates a "file not found" error packet
-						DatagramPacket errorPacket = TFTP.formERRORPacket(
+						// Write the data packet to file
+						fileBytes = TFTP.appendData(receivePacket, fileBytes);
+						if ((fileBytes.length*TFTP.MAX_DATA_SIZE) > TFTP.getFreeSpaceOnFileSystem(directory)) {
+							// Creates a "file not found" error packet
+							DatagramPacket errorPacket = TFTP.formERRORPacket(
 								replyAddr,
 								TID,
 								TFTP.ERROR_CODE_DISK_FULL,
 								"\"" + r.getFileName() + "\" could not be transferred because disk is full.");
 
-						// Sends error packet
-						try {
-							socket.send(errorPacket);
-						} catch (Exception e) {
+							// Sends error packet
+							try {
+								socket.send(errorPacket);
+							} catch (Exception e) {
+							}
+
+							// Echo error message
+							if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_DISK_FULL + ": Disk full. Aborting transfer...\n");
+
+							// Closes socket and aborts thread
+							socket.close();
+							return;
 						}
-
-						// Echo error message
-						if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_DISK_FULL + ": Disk full. Aborting transfer...\n");
-
-						// Closes socket and aborts thread
-						socket.close();
-						return;
 					}
-
+					
 					// Form a ACK packet to respond with
-					if (verbose) System.out.println("Sending ACK" + currentBlockNumber + ".");
 					ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
+					if (verbose) System.out.println("Sending ACK" + TFTP.getBlockNumber(ackPacket) + ".");
 					socket.send(ackPacket);
-					currentBlockNumber = (currentBlockNumber + 1) % (TFTP.MAX_BLOCK_NUMBER + 1);
+					
+					//Incrament next block number expected only if the last packet received was the correct sequentially expected one 
+					if(packetInOrder){
+						currentBlockNumber = (currentBlockNumber + 1) % (TFTP.MAX_BLOCK_NUMBER + 1);
+					}
+					
 				} while (!transferComplete);
-				//} while (TFTP.getData(receivePacket).length == TFTP.MAX_DATA_SIZE);
+
 				// Write data to file
 				TFTP.writeBytesToFile(directory + r.getFileName(), fileBytes);
 				if (verbose) System.out.println("\nWrite complete.\n");
@@ -454,7 +512,7 @@ public class Server implements Exitable {
 		}
 
 		/**
-		* Wait for packet from server. when received, a response packet
+		* Wait for packet from client. When received, a response packet
 		* is sent back to the sender if the received packet is valid. otherwise
 		* an exception is thrown and the server quits.
 		*/
