@@ -614,6 +614,7 @@ public class ErrorSimulator
 
 		public ReadTransferHandler(DatagramPacket clientRequestPacket)
 		{
+			System.out.println("Creating new ReadTransferHander");
 			this.clientRequestPacket = clientRequestPacket;
 		}
 
@@ -648,8 +649,8 @@ public class ErrorSimulator
 					packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 					packetDelayerThread.start();
 				} else if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_LOSS) {
-					// If request loss error, we dont send a packet at all
-					System.out.println("Withholding your packet.");
+					// If request loss error, we don't send a packet at all
+					System.out.println("Withholding packet RRQ.");
 				} else {
 					// Proceed as normal otherwise
 					tamperPacket(serverRequestPacket, RECEIVED_FROM_CLIENT);
@@ -677,6 +678,7 @@ public class ErrorSimulator
 
 				try
 				{
+					boolean packetLossTriggered = false;
 					while (true)
 					//while (!transferComplete)
 					{
@@ -684,8 +686,9 @@ public class ErrorSimulator
 						DatagramPacket dataPacket = TFTP.formPacket();
 
 						// Receives data packet from server
+						System.out.println("Waiting on DATA packet from server.");
 						sendReceiveServerSocket.receive(dataPacket);
-
+						
 						// Transfer is complete if server sends back an error packet
 						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE)
 						{
@@ -720,22 +723,26 @@ public class ErrorSimulator
 						// 3. Error simulator is simulating a network error
 						if (causeSelected == RECEIVED_FROM_SERVER &&
 									!TFTP.verifyErrorPacket(forwardedDataPacket) &&
-									blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket) &&
-									isDelayableError(modeSelected, errorSelected)) {
-							// Send current request now if duplicating
-							if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
-								System.out.println("[ERRSIM=>CLIENT]");
-								TFTP.printPacket(forwardedDataPacket);
-								sendReceiveClientSocket.send(forwardedDataPacket);
+									!packetLossTriggered &&
+									blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) { 
+							if (isDelayableError(modeSelected, errorSelected)) {
+								// Send current request now if duplicating
+								if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+									System.out.println("[ERRSIM=>CLIENT]");
+									TFTP.printPacket(forwardedDataPacket);
+									sendReceiveClientSocket.send(forwardedDataPacket);
+								}
+								// Send a delayed packet
+								PacketDelayer packetDelayer = new PacketDelayer(sendReceiveClientSocket, forwardedDataPacket, packetDelay);
+								packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
+								packetDelayerThread.start();
+							} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
+								// If request loss error, we don't send a packet at all
+								System.out.println("Withholding DATA" + blockNumberSelected + ".");
+								// Break current loop and wait for next data packet
+								packetLossTriggered = true;
+								continue;
 							}
-							// Send a delayed packet
-							PacketDelayer packetDelayer = new PacketDelayer(sendReceiveClientSocket, forwardedDataPacket, packetDelay);
-							packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
-							packetDelayerThread.start();
-						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS
-								&& blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) {
-							// If request loss error, we dont send a packet at all
-							System.out.println("Withholding your packet.");
 						} else {
 							// Proceed as normal otherwise
 							// Sends data packet to client
@@ -745,23 +752,24 @@ public class ErrorSimulator
 							TFTP.printPacket(forwardedDataPacket);
 							sendReceiveClientSocket.send(forwardedDataPacket);
 						}
-
+						
 						// End transfer if last packet received was an error packet
 						if (errorPacketReceived) {
 							//transferComplete = true;
 							//break;
 						}
 
-						// Creates a DatagramPacket to receive acknowledgement packet from client
+						// Creates a DatagramPacket to receive acknowledgment packet from client
 						DatagramPacket ackPacket = TFTP.formPacket();
 
-						// Receives acknowledgement packet from client
+						// Receives acknowledgment packet from client
+						System.out.println("Waiting on ACK from client.");
 						sendReceiveClientSocket.receive(ackPacket);
 						TFTP.shrinkData(ackPacket);
 						System.out.println("[CLIENT=>ERRSIM]");
 						TFTP.printPacket(ackPacket);
 
-						// Sends acknowledgement packet to server
+						// Sends acknowledgment packet to server
 						DatagramPacket forwardedAckPacket = TFTP.formPacket(
 								serverAddressTID,
 								serverPortTID,
@@ -775,23 +783,26 @@ public class ErrorSimulator
 						//System.out.println("blockNumberSelected = 1:" + (blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket)));
 						//System.out.println("isDelayble" + isDelayableError(modeSelected, errorSelected));
 						if (causeSelected == RECEIVED_FROM_CLIENT &&
+									!packetLossTriggered &&
 									!TFTP.verifyErrorPacket(forwardedAckPacket) &&
-									blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket) &&
-									isDelayableError(modeSelected, errorSelected)) {
-							// Send current request now if duplicating
-							if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
-								System.out.println("[ERRSIM=>SERVER]");
-								TFTP.printPacket(forwardedAckPacket);
-								sendReceiveServerSocket.send(forwardedAckPacket);
+									blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket)) { 
+							if (isDelayableError(modeSelected, errorSelected)) {
+								// Send current request now if duplicating
+								if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+									System.out.println("[ERRSIM=>SERVER]");
+									TFTP.printPacket(forwardedAckPacket);
+									sendReceiveServerSocket.send(forwardedAckPacket);
+								}
+								// Send a delayed packet
+								PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, forwardedAckPacket, packetDelay);
+								packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
+								packetDelayerThread.start();
+							} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
+								// If request loss error, we don't send a packet at all
+								System.out.println("Withholding ACK" + blockNumberSelected + ".");
+								packetLossTriggered = true;
+								continue;
 							}
-							// Send a delayed packet
-							PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, forwardedAckPacket, packetDelay);
-							packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
-							packetDelayerThread.start();
-						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS
-								&& blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) {
-							// If request loss error, we dont send a packet at all
-							System.out.println("Withholding your packet.");
 						} else {
 							// Proceed as normal otherwise
 							tamperPacket(forwardedAckPacket, RECEIVED_FROM_CLIENT);
@@ -822,6 +833,7 @@ public class ErrorSimulator
 				}
 				finally
 				{
+					System.out.println("Handler done. Closing.");
 					sendReceiveClientSocket.close();
 					sendReceiveServerSocket.close();
 				}
@@ -878,8 +890,8 @@ public class ErrorSimulator
 					packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 					packetDelayerThread.start();
 				} else if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_LOSS) {
-					// If request loss error, we dont send a packet at all
-					System.out.println("Withholding your packet.");
+					// If request loss error, we don't send a packet at all
+					System.out.println("Withholding packet " + blockNumberSelected + ".");
 				} else {
 					// Proceed as normal otherwise
 					tamperPacket(serverRequestPacket, RECEIVED_FROM_CLIENT);
@@ -888,10 +900,10 @@ public class ErrorSimulator
 					sendReceiveServerSocket.send(serverRequestPacket);
 				}
 
-				// Creates a DatagramPacket to receive acknowledgement packet from server
+				// Creates a DatagramPacket to receive acknowledgment packet from server
 				DatagramPacket firstAckPacket = TFTP.formPacket();
 
-				// Receives acknowledgement packet from server
+				// Receives acknowledgment packet from server
 				sendReceiveServerSocket.receive(firstAckPacket);
 				TFTP.shrinkData(firstAckPacket);
 				System.out.println("[SERVER=>ERRSIM]");
@@ -911,7 +923,7 @@ public class ErrorSimulator
 				InetAddress serverAddressTID = firstAckPacket.getAddress();
 				int serverPortTID = firstAckPacket.getPort();
 
-				// Sends acknowledgement packet to client
+				// Sends acknowledgment packet to client
 				DatagramPacket forwardedFirstAckPacket = TFTP.formPacket(
 						clientAddressTID,
 						clientPortTID,
@@ -931,15 +943,15 @@ public class ErrorSimulator
 					//transferComplete = true;
 				}
 
-				try
-				{
+				try {
+					boolean packetLossTriggered = false;
 					//while (!transferComplete)
-					while (true)
-					{
+					while (true) {
 						// Creates a DatagramPacket to receive data packet from client
 						DatagramPacket dataPacket = TFTP.formPacket();
 
 						// Receives data packet from client
+						System.out.println("Waiting for data from client");
 						sendReceiveClientSocket.receive(dataPacket);
 
 						// Transfer if client sends back an error packet
@@ -973,22 +985,25 @@ public class ErrorSimulator
 						//System.out.println("isDelayble" + isDelayableError(modeSelected, errorSelected));
 						if (causeSelected == RECEIVED_FROM_CLIENT &&
 									!TFTP.verifyErrorPacket(forwardedDataPacket) &&
-									blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket) &&
-									isDelayableError(modeSelected, errorSelected)) {
-							// Send current request now if duplicating
-							if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
-								System.out.println("[ERRSIM=>SERVER]");
-								TFTP.printPacket(forwardedDataPacket);
-								sendReceiveServerSocket.send(forwardedDataPacket);
+									!packetLossTriggered &&
+									blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) { 
+							if (isDelayableError(modeSelected, errorSelected)) {
+								// Send current request now if duplicating
+								if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+									System.out.println("[ERRSIM=>SERVER]");
+									TFTP.printPacket(forwardedDataPacket);
+									sendReceiveServerSocket.send(forwardedDataPacket);
+								}
+								// Send a delayed packet
+								PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, forwardedDataPacket, packetDelay);
+								packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
+								packetDelayerThread.start();
+							} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
+								// If request loss error, we dont send a packet at all
+								System.out.println("Withholding DATA" + blockNumberSelected + ".");
+								packetLossTriggered = true;
+								continue;
 							}
-							// Send a delayed packet
-							PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, forwardedDataPacket, packetDelay);
-							packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
-							packetDelayerThread.start();
-						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS
-								&& blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) {
-							// If request loss error, we dont send a packet at all
-							System.out.println("Withholding your packet.");
 						} else {
 							// Proceed as normal otherwise
 							tamperPacket(forwardedDataPacket, RECEIVED_FROM_CLIENT);
@@ -1005,16 +1020,17 @@ public class ErrorSimulator
 							//break;
 						}
 
-						// Creates a DatagramPacket to receive acknowledgement packet from server
+						// Creates a DatagramPacket to receive acknowledgment packet from server
 						DatagramPacket ackPacket = TFTP.formPacket();
 
-						// Receives acknowledgement packet from server
+						// Receives acknowledgment packet from server
+						System.out.println("Waiting for ack from server");
 						sendReceiveServerSocket.receive(ackPacket);
 						TFTP.shrinkData(ackPacket);
 						System.out.println("[SERVER=>ERRSIM]");
 						TFTP.printPacket(ackPacket);
 
-						// Sends acknowledgement packet to client
+						// Sends acknowledgment packet to client
 						DatagramPacket forwardedAckPacket = TFTP.formPacket(
 								clientAddressTID,
 								clientPortTID,
@@ -1026,23 +1042,28 @@ public class ErrorSimulator
 						// 3. Error simulator is simulating a network error
 						if (causeSelected == RECEIVED_FROM_SERVER &&
 									!TFTP.verifyErrorPacket(forwardedAckPacket) &&
-									blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket) &&
-									isDelayableError(modeSelected, errorSelected)) {
-							// Send current request now if duplicating
-							if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
-								System.out.println("[ERRSIM=>CLIENT]");
-								TFTP.printPacket(forwardedAckPacket);
-								sendReceiveClientSocket.send(forwardedAckPacket);
+									!packetLossTriggered &&
+									blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket)) {
+							if (isDelayableError(modeSelected, errorSelected)) {
+								// Send current request now if duplicating
+								if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+									System.out.println("[ERRSIM=>CLIENT]");
+									TFTP.printPacket(forwardedAckPacket);
+									sendReceiveClientSocket.send(forwardedAckPacket);
+								}
+								// Send a delayed packet
+								PacketDelayer packetDelayer = new PacketDelayer(sendReceiveClientSocket, forwardedAckPacket, packetDelay);
+								packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
+								packetDelayerThread.start();
+							} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
+								// If request loss error, we dont send a packet at all
+								System.out.println("Withholding ACK" + blockNumberSelected + ".");
+								// Break current loop and wait for next data packet
+								packetLossTriggered = true;
+								continue;
 							}
-							// Send a delayed packet
-							PacketDelayer packetDelayer = new PacketDelayer(sendReceiveClientSocket, forwardedAckPacket, packetDelay);
-							packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
-							packetDelayerThread.start();
-						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS
-								&& blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) {
-							// If request loss error, we dont send a packet at all
-							System.out.println("Withholding your packet.");
 						} else {
+							packetLossTriggered = false;
 							// Proceed as normal otherwise
 							// Sends data packet to client
 							tamperPacket(forwardedAckPacket, RECEIVED_FROM_SERVER);
@@ -1051,6 +1072,7 @@ public class ErrorSimulator
 							TFTP.printPacket(forwardedAckPacket);
 							sendReceiveClientSocket.send(forwardedAckPacket);
 						}
+						
 
 						// Transfer is complete if server sends back an error packet
 						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE)
@@ -1073,6 +1095,7 @@ public class ErrorSimulator
 				}
 				finally
 				{
+					System.out.println("Handler done. Closing.");
 					sendReceiveClientSocket.close();
 					sendReceiveServerSocket.close();
 				}
