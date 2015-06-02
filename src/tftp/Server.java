@@ -198,11 +198,23 @@ public class Server implements Exitable {
 			}
 			if (verbose) System.out.println("Packets formed. Ready to send " + dataPacketQueue.size() + " blocks.");
 
+			boolean transferComplete = false;
+			boolean packetInOrder = true;
+			int currentBlockNumber = 1;
+			
+			DatagramPacket nextPacket = dataPacketQueue.remove();
+			
 			// Send each packet and wait for an ACK until queue is empty
-			while (!dataPacketQueue.isEmpty()) {
+			while (!transferComplete) {
+				DatagramPacket currentPacket = nextPacket;
+				
+				//Only update current block number and send data block if the previous packet was the correct sequential packet (not duplicated/delayed)
+				if(packetInOrder){
+					// Send a packet
+					currentBlockNumber = TFTP.getBlockNumber(currentPacket);
+				}
+
 				// Send a packet
-				DatagramPacket currentPacket = dataPacketQueue.remove();
-				int currentBlockNumber = TFTP.getBlockNumber(currentPacket);
 				try {
 					if (verbose) System.out.println("Sending DATA block number " + currentBlockNumber + ".");
 					if (verbose) System.out.println("Block size is " + TFTP.getData(currentPacket).length + ".");
@@ -237,6 +249,7 @@ public class Server implements Exitable {
 										return;
 									}
 									//otherwise re-send
+										System.out.println("Timed out, resending DATA" + TFTP.getBlockNumber(currentPacket));
 										socket.send(currentPacket);
 								}
 							}
@@ -300,13 +313,18 @@ public class Server implements Exitable {
 						}
 
 					if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received.");
+					
+					transferComplete = dataPacketQueue.isEmpty();
+					packetInOrder = TFTP.checkPacketInOrder(receivePacket, currentBlockNumber);
 				
 					//if packet received is not the expected next ACK in the transfer (ie. a delayed or duplicate packet), ignore it 
 					//otherwise increment current block number to wait for the next ack
-					if(TFTP.checkPacketInOrder(receivePacket, currentBlockNumber))
+					if(packetInOrder && !transferComplete)
 					{
 						currentBlockNumber = (currentBlockNumber + 1) % 65536;
+						nextPacket = dataPacketQueue.remove();
 					}
+					
 				} catch(Exception e) {
 					System.out.println(e.getMessage());
 				}
@@ -367,7 +385,6 @@ public class Server implements Exitable {
 								socket.receive(receivePacket);
 								i = RESEND_LIMIT+1;		//If packet successfully received, leave loop
 						} catch(SocketTimeoutException e) {
-							System.out.println("Timed out, resending.");
 							//if re-send attempt limit reached, 'give up' and cancel transfer
 							if(i == RESEND_LIMIT) {
 								System.out.println("No response from client after " + RESEND_LIMIT + " attempts. Try again later.");
@@ -375,6 +392,7 @@ public class Server implements Exitable {
 								return;
 							}
 							//otherwise re-send
+								System.out.println("Timed out, resending ACK" + + TFTP.getBlockNumber(ackPacket));
 								socket.send(ackPacket);
 						}
 					}
@@ -466,7 +484,7 @@ public class Server implements Exitable {
 					}
 					
 					// Form a ACK packet to respond with
-					ackPacket = TFTP.formACKPacket(replyAddr, TID, currentBlockNumber);
+					ackPacket = TFTP.formACKPacket(replyAddr, TID, TFTP.getBlockNumber(receivePacket));
 					if (verbose) System.out.println("Sending ACK" + TFTP.getBlockNumber(ackPacket) + ".");
 					socket.send(ackPacket);
 					

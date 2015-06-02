@@ -75,10 +75,11 @@ public class Client implements Exitable {
 					} catch(SocketTimeoutException e) {
 						//if re-send attempt limit reached, 'give up' and cancel transfer
 						if(i == RESEND_LIMIT-1) {
-							System.out.println("No response from server after " + RESEND_LIMIT + " attempts. Try again later./n");
+							System.out.println("No response from server after " + RESEND_LIMIT + " attempts. Try again later.");
 							return;
 						}
 						//otherwise re-send
+						if(verbose) System.out.println("Timed out, resending write request.");
 						sendReceiveSocket.send(requestPacket);
 					}
 				}
@@ -138,9 +139,10 @@ public class Client implements Exitable {
 		if (verbose)System.out.println("Packets formed. Ready to send " + dataPacketQueue.size() + " blocks.");
 
 		DatagramPacket nextPacket = dataPacketQueue.remove();
+		boolean doneTransfer = false;
 		
 		// Send each packet and wait for an ACK until queue is empty
-		while (!dataPacketQueue.isEmpty()) {
+		while (!doneTransfer) {
 			
 			DatagramPacket currentPacket = nextPacket;
 			
@@ -172,13 +174,13 @@ public class Client implements Exitable {
 								sendReceiveSocket.receive(receivePacket);
 								i = RESEND_LIMIT+1;		//packet successfully received, exit loop
 						} catch(SocketTimeoutException e) {
-							//System.out.println("Timed out, retrying");
 							//if re-send attempt limit reached, 'give up' and cancel transfer
 							if(i == RESEND_LIMIT) {
 								System.out.println("No response from server after " + RESEND_LIMIT + " attempts. Try again later.");
 								return;
 							}
 							//otherwise re-send
+								if(verbose) System.out.println("Timed out, resending DATA" + TFTP.getBlockNumber(currentPacket));
 								sendReceiveSocket.send(currentPacket);
 						}
 					}				
@@ -239,7 +241,9 @@ public class Client implements Exitable {
 
 				packetInOrder = TFTP.checkPacketInOrder(receivePacket, currentBlockNumber);
 				
-				if(packetInOrder && !dataPacketQueue.isEmpty()){
+				doneTransfer = dataPacketQueue.isEmpty();
+				
+				if(packetInOrder && !doneTransfer){
 					nextPacket = dataPacketQueue.remove();
 				}
 				
@@ -308,7 +312,7 @@ public class Client implements Exitable {
 							return;
 						}
 						//otherwise re-send
-						//	System.out.println("Timeout, resending. " + i);
+							if(verbose) System.out.println("Timed out, resending ACK" + + TFTP.getBlockNumber(previousPacket));
 							sendReceiveSocket.send(previousPacket);
 					}
 				}
