@@ -129,6 +129,7 @@ public class Client implements Exitable {
 		if (verbose) System.out.println("Forming packet queue from file...");
 		Queue<DatagramPacket> dataPacketQueue = null;
 		int currentBlockNumber = 1;
+		
 		try {
 			dataPacketQueue = TFTP.formDATAPackets(replyAddr, TID, filePath);
 		} catch (FileNotFoundException e1) {
@@ -136,19 +137,21 @@ public class Client implements Exitable {
 		}
 		if (verbose)System.out.println("Packets formed. Ready to send " + dataPacketQueue.size() + " blocks.");
 
+		DatagramPacket nextPacket = dataPacketQueue.remove();
+		
 		// Send each packet and wait for an ACK until queue is empty
 		while (!dataPacketQueue.isEmpty()) {
-			// Send a packet
-			DatagramPacket currentPacket = dataPacketQueue.remove();
 			
-			//Only update current block if the previous packet was the correct sequential packet (not duplicated/delayed)
+			DatagramPacket currentPacket = nextPacket;
+			
+			//Only update current block number and send data block if the previous packet was the correct sequential packet (not duplicated/delayed)
 			if(packetInOrder){
+				// Send a packet
 				currentBlockNumber = TFTP.getBlockNumber(currentPacket);
-			}
 				if (verbose) System.out.println("Sending DATA" + currentBlockNumber + ".");
 				//if (verbose) System.out.println("Block size is" + TFTP.getData(currentPacket).length + ".");
 				sendReceiveSocket.send(currentPacket);
-
+			}
 
 			// Wait for ACK
 			try {
@@ -235,6 +238,10 @@ public class Client implements Exitable {
 				}
 
 				packetInOrder = TFTP.checkPacketInOrder(receivePacket, currentBlockNumber);
+				
+				if(packetInOrder && !dataPacketQueue.isEmpty()){
+					nextPacket = dataPacketQueue.remove();
+				}
 				
 				if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received.");
 			} catch(Exception e) {
