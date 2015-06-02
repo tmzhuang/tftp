@@ -732,7 +732,8 @@ public class ErrorSimulator
 							PacketDelayer packetDelayer = new PacketDelayer(sendReceiveClientSocket, forwardedDataPacket, packetDelay);
 							packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 							packetDelayerThread.start();
-						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
+						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS
+								&& blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) {
 							// If request loss error, we dont send a packet at all
 							System.out.println("Withholding your packet.");
 						} else {
@@ -787,7 +788,8 @@ public class ErrorSimulator
 							PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, forwardedAckPacket, packetDelay);
 							packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 							packetDelayerThread.start();
-						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
+						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS
+								&& blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) {
 							// If request loss error, we dont send a packet at all
 							System.out.println("Withholding your packet.");
 						} else {
@@ -983,7 +985,8 @@ public class ErrorSimulator
 							PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, forwardedDataPacket, packetDelay);
 							packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 							packetDelayerThread.start();
-						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
+						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS
+								&& blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) {
 							// If request loss error, we dont send a packet at all
 							System.out.println("Withholding your packet.");
 						} else {
@@ -1035,7 +1038,8 @@ public class ErrorSimulator
 							PacketDelayer packetDelayer = new PacketDelayer(sendReceiveClientSocket, forwardedAckPacket, packetDelay);
 							packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 							packetDelayerThread.start();
-						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
+						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS
+								&& blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) {
 							// If request loss error, we dont send a packet at all
 							System.out.println("Withholding your packet.");
 						} else {

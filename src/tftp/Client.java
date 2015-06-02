@@ -182,6 +182,7 @@ public class Client implements Exitable {
 							//otherwise re-send
 								if(verbose) System.out.println("Timed out, resending DATA" + TFTP.getBlockNumber(currentPacket));
 								sendReceiveSocket.send(currentPacket);
+								TFTP.printPacket(currentPacket);
 						}
 					}				
 					
@@ -420,7 +421,6 @@ public class Client implements Exitable {
 				//Update the current block number only if the packet was not a duplicate/delayed
 				if(packetInOrder){
 					currentBlockNumber = (currentBlockNumber + 1) % 65536;
-					//previousPacket = ackPacket;
 				}
 				
 				// Newline
