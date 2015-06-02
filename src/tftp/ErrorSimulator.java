@@ -718,10 +718,11 @@ public class ErrorSimulator
 						// 2. Block number matches the one selected by user
 						// 3. Error simulator is simulating a network error
 						if (causeSelected == RECEIVED_FROM_SERVER &&
+									!TFTP.verifyErrorPacket(forwardedDataPacket) &&
 									blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket) &&
 									isDelayableError(modeSelected, errorSelected)) {
 							// Send current request now if duplicating
-							if (errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+							if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
 								System.out.println("[ERRSIM=>CLIENT]");
 								TFTP.printPacket(forwardedDataPacket);
 								sendReceiveClientSocket.send(forwardedDataPacket);
@@ -772,10 +773,11 @@ public class ErrorSimulator
 						//System.out.println("blockNumberSelected = 1:" + (blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket)));
 						//System.out.println("isDelayble" + isDelayableError(modeSelected, errorSelected));
 						if (causeSelected == RECEIVED_FROM_CLIENT &&
+									!TFTP.verifyErrorPacket(forwardedAckPacket) &&
 									blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket) &&
 									isDelayableError(modeSelected, errorSelected)) {
 							// Send current request now if duplicating
-							if (errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+							if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
 								System.out.println("[ERRSIM=>SERVER]");
 								TFTP.printPacket(forwardedAckPacket);
 								sendReceiveServerSocket.send(forwardedAckPacket);
@@ -860,7 +862,7 @@ public class ErrorSimulator
 				// Sends request packet through socket
 				if (isDelayableError(modeSelected, errorSelected)) {
 					// Send current request now if duplicating
-					if (errorSelected == ERROR_REQUEST_DUPLICATE) {
+					if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_DUPLICATE) {
 						System.out.println("[ERRSIM=>SERVER]");
 						TFTP.printPacket(serverRequestPacket);
 						sendReceiveServerSocket.send(serverRequestPacket);
@@ -963,10 +965,11 @@ public class ErrorSimulator
 						//System.out.println("blockNumberSelected = 1:" + (blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket)));
 						//System.out.println("isDelayble" + isDelayableError(modeSelected, errorSelected));
 						if (causeSelected == RECEIVED_FROM_CLIENT &&
+									!TFTP.verifyErrorPacket(forwardedDataPacket) &&
 									blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket) &&
 									isDelayableError(modeSelected, errorSelected)) {
 							// Send current request now if duplicating
-							if (errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+							if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
 								System.out.println("[ERRSIM=>SERVER]");
 								TFTP.printPacket(forwardedDataPacket);
 								sendReceiveServerSocket.send(forwardedDataPacket);
@@ -1014,10 +1017,11 @@ public class ErrorSimulator
 						// 2. Block number matches the one selected by user
 						// 3. Error simulator is simulating a network error
 						if (causeSelected == RECEIVED_FROM_SERVER &&
+									!TFTP.verifyErrorPacket(forwardedAckPacket) &&
 									blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket) &&
 									isDelayableError(modeSelected, errorSelected)) {
 							// Send current request now if duplicating
-							if (errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+							if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
 								System.out.println("[ERRSIM=>CLIENT]");
 								TFTP.printPacket(forwardedAckPacket);
 								sendReceiveClientSocket.send(forwardedAckPacket);
