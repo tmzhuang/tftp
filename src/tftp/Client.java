@@ -13,9 +13,9 @@ import java.util.*;
 public class Client implements Exitable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
-	private static int SEND_PORT = 68;
+	//private static int SEND_PORT = 68;
 	//private static int SEND_PORT = 69;
-	//private static int SEND_PORT = 32001;
+	private static int SEND_PORT = 32001;
 	//private static int SEND_PORT = 32002;
 	private InetAddress replyAddr;
 	private int TID;
