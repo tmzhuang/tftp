@@ -247,7 +247,7 @@ public class Client implements Exitable {
 					nextPacket = dataPacketQueue.remove();
 				}
 				
-				if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received.");
+				if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received. addr = " + receivePacket.getAddress().toString() + ", port = " + receivePacket.getPort());
 			} catch(Exception e) {
 				System.out.println(e.getMessage());
 			}
@@ -288,7 +288,7 @@ public class Client implements Exitable {
 			boolean packetInOrder;
 			
 			//To hold most recently sent packet for possible re-sending if needed.
-			DatagramPacket previousPacket = requestPacket;
+			//DatagramPacket previousPacket = requestPacket;
 			
 			int currentBlockNumber = 1;
 			byte[] fileBytes = new byte[0];
@@ -311,9 +311,9 @@ public class Client implements Exitable {
 							System.out.println("No response from server after " + RESEND_LIMIT + " attempts. Try again later.");
 							return;
 						}
-						//otherwise re-send
-							if(verbose) System.out.println("Timed out, resending ACK" + + TFTP.getBlockNumber(previousPacket));
-							sendReceiveSocket.send(previousPacket);
+						//don't re-send ACK packets
+						//	if(verbose) System.out.println("Timed out, resending ACK" + + TFTP.getBlockNumber(previousPacket));
+						//	sendReceiveSocket.send(previousPacket);
 					}
 				}
 				
@@ -420,7 +420,7 @@ public class Client implements Exitable {
 				//Update the current block number only if the packet was not a duplicate/delayed
 				if(packetInOrder){
 					currentBlockNumber = (currentBlockNumber + 1) % 65536;
-					previousPacket = ackPacket;
+					//previousPacket = ackPacket;
 				}
 				
 				// Newline

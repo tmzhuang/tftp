@@ -368,8 +368,8 @@ public class Server implements Exitable {
 				}
 
 				// Form and send ACK0
-				if (verbose) System.out.println("Sending ACK0.");
 				DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, 0);
+				if (verbose) System.out.println("Sending ACK0. Address: " + ackPacket.getAddress() + "Port: " + ackPacket.getPort());
 				socket.send(ackPacket);
 
 				// Flag set when transfer is finished
@@ -392,8 +392,8 @@ public class Server implements Exitable {
 								return;
 							}
 							//otherwise re-send
-								System.out.println("Timed out, resending ACK" + + TFTP.getBlockNumber(ackPacket));
-								socket.send(ackPacket);
+						//		System.out.println("Timed out, resending ACK" + + TFTP.getBlockNumber(ackPacket));
+						//		socket.send(ackPacket);
 						}
 					}
 					
