@@ -806,7 +806,8 @@ public class ErrorSimulator
 							break;
 						}
 
-						if (isDelayableError(modeSelected, errorSelected)) {
+						if (isDelayableError(modeSelected, errorSelected)
+							&& packetDelayerThread != null) {
 							try {
 								// Wait for packet delayer to finish before closing sockets
 								packetDelayerThread.join();
@@ -1053,7 +1054,8 @@ public class ErrorSimulator
 						}
 					}
 
-					if (isDelayableError(modeSelected, errorSelected)) {
+					if (isDelayableError(modeSelected, errorSelected)
+							&& packetDelayerThread != null) {
 						try {
 							// Wait for packet delayer to finish before closing sockets
 							packetDelayerThread.join();
