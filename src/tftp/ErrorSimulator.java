@@ -88,6 +88,7 @@ public class ErrorSimulator
 				Thread.sleep(delay);
 				System.out.println("Delay complete. Sending packet now.");
 				socket.send(packet);
+				System.out.println("[DELAYED PACKET]");
 				TFTP.printPacket(packet);
 				//System.out.println("BLARGH");
 			} catch(InterruptedException e) {
@@ -351,6 +352,7 @@ public class ErrorSimulator
 				// Receives response packet through socket
 				receiveSocket.receive(clientRequestPacket);
 				TFTP.shrinkData(clientRequestPacket);
+				System.out.println("[CLIENT=>ERRSIM]");
 				TFTP.printPacket(clientRequestPacket);
 
 				// Creates a thread to handle client request
@@ -637,6 +639,7 @@ public class ErrorSimulator
 				if (isDelayableError(modeSelected, errorSelected)) {
 					// Send current request now if duplicating
 					if (errorSelected == ERROR_REQUEST_DUPLICATE) {
+						System.out.println("[ERRSIM=>SERVER]");
 						TFTP.printPacket(serverRequestPacket);
 						sendReceiveServerSocket.send(serverRequestPacket);
 					}
@@ -644,11 +647,13 @@ public class ErrorSimulator
 					PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, serverRequestPacket, packetDelay);
 					packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 					packetDelayerThread.start();
-				} else if (errorSelected == ERROR_REQUEST_LOSS) {
+				} else if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_LOSS) {
 					// If request loss error, we dont send a packet at all
+					System.out.println("Withholding your packet.");
 				} else {
 					// Proceed as normal otherwise
 					tamperPacket(serverRequestPacket, RECEIVED_FROM_CLIENT);
+					System.out.println("[ERRSIM=>SERVER]");
 					TFTP.printPacket(serverRequestPacket);
 					sendReceiveServerSocket.send(serverRequestPacket);
 				}
@@ -692,6 +697,7 @@ public class ErrorSimulator
 							transferComplete = true;
 						}
 						TFTP.shrinkData(dataPacket);
+						System.out.println("[SERVER=>ERRSIM]");
 						TFTP.printPacket(dataPacket);
 
 						// Saves server TID on first iteration
@@ -716,6 +722,7 @@ public class ErrorSimulator
 									isDelayableError(modeSelected, errorSelected)) {
 							// Send current request now if duplicating
 							if (errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+								System.out.println("[ERRSIM=>CLIENT]");
 								TFTP.printPacket(forwardedDataPacket);
 								sendReceiveClientSocket.send(forwardedDataPacket);
 							}
@@ -723,13 +730,15 @@ public class ErrorSimulator
 							PacketDelayer packetDelayer = new PacketDelayer(sendReceiveClientSocket, forwardedDataPacket, packetDelay);
 							packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 							packetDelayerThread.start();
-						} else if (errorSelected == ERROR_ACK_DATA_LOSS) {
+						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
 							// If request loss error, we dont send a packet at all
+							System.out.println("Withholding your packet.");
 						} else {
 							// Proceed as normal otherwise
 							// Sends data packet to client
 							tamperPacket(forwardedDataPacket, RECEIVED_FROM_SERVER);
 							spawnUnknownTIDThread(forwardedDataPacket, clientAddressTID, clientPortTID);
+							System.out.println("[ERRSIM=>CLIENT]");
 							TFTP.printPacket(forwardedDataPacket);
 							sendReceiveClientSocket.send(forwardedDataPacket);
 						}
@@ -746,6 +755,7 @@ public class ErrorSimulator
 						// Receives acknowledgement packet from client
 						sendReceiveClientSocket.receive(ackPacket);
 						TFTP.shrinkData(ackPacket);
+						System.out.println("[CLIENT=>ERRSIM]");
 						TFTP.printPacket(ackPacket);
 
 						// Sends acknowledgement packet to server
@@ -766,6 +776,7 @@ public class ErrorSimulator
 									isDelayableError(modeSelected, errorSelected)) {
 							// Send current request now if duplicating
 							if (errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+								System.out.println("[ERRSIM=>SERVER]");
 								TFTP.printPacket(forwardedAckPacket);
 								sendReceiveServerSocket.send(forwardedAckPacket);
 							}
@@ -773,13 +784,14 @@ public class ErrorSimulator
 							PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, forwardedAckPacket, packetDelay);
 							packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 							packetDelayerThread.start();
-						} else if (errorSelected == ERROR_ACK_DATA_LOSS) {
+						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
 							// If request loss error, we dont send a packet at all
 							System.out.println("Withholding your packet.");
 						} else {
 							// Proceed as normal otherwise
 							tamperPacket(forwardedAckPacket, RECEIVED_FROM_CLIENT);
 							spawnUnknownTIDThread(forwardedAckPacket, serverAddressTID, serverPortTID);
+							System.out.println("[ERRSIM=>SERVER]");
 							TFTP.printPacket(forwardedAckPacket);
 							sendReceiveServerSocket.send(forwardedAckPacket);
 						}
@@ -849,6 +861,7 @@ public class ErrorSimulator
 				if (isDelayableError(modeSelected, errorSelected)) {
 					// Send current request now if duplicating
 					if (errorSelected == ERROR_REQUEST_DUPLICATE) {
+						System.out.println("[ERRSIM=>SERVER]");
 						TFTP.printPacket(serverRequestPacket);
 						sendReceiveServerSocket.send(serverRequestPacket);
 					}
@@ -856,11 +869,13 @@ public class ErrorSimulator
 					PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, serverRequestPacket, packetDelay);
 					packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 					packetDelayerThread.start();
-				} else if (errorSelected == ERROR_REQUEST_LOSS) {
+				} else if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_LOSS) {
 					// If request loss error, we dont send a packet at all
+					System.out.println("Withholding your packet.");
 				} else {
 					// Proceed as normal otherwise
 					tamperPacket(serverRequestPacket, RECEIVED_FROM_CLIENT);
+					System.out.println("[ERRSIM=>SERVER]");
 					TFTP.printPacket(serverRequestPacket);
 					sendReceiveServerSocket.send(serverRequestPacket);
 				}
@@ -871,6 +886,7 @@ public class ErrorSimulator
 				// Receives acknowledgement packet from server
 				sendReceiveServerSocket.receive(firstAckPacket);
 				TFTP.shrinkData(firstAckPacket);
+				System.out.println("[SERVER=>ERRSIM]");
 				TFTP.printPacket(firstAckPacket);
 
 				// Transfer if server sends back an error packet
@@ -894,6 +910,7 @@ public class ErrorSimulator
 						firstAckPacket.getData());
 				tamperPacket(forwardedFirstAckPacket, RECEIVED_FROM_SERVER);
 				spawnUnknownTIDThread(forwardedFirstAckPacket, clientAddressTID, clientPortTID);
+				System.out.println("[ERRSIM=>CLIENT]");
 				TFTP.printPacket(forwardedFirstAckPacket);
 				sendReceiveClientSocket.send(forwardedFirstAckPacket);
 
@@ -928,6 +945,7 @@ public class ErrorSimulator
 							transferComplete = true;
 						}
 						TFTP.shrinkData(dataPacket);
+						System.out.println("[CLIENT=>ERRSIM]");
 						TFTP.printPacket(dataPacket);
 
 						// Sends data packet to server
@@ -949,6 +967,7 @@ public class ErrorSimulator
 									isDelayableError(modeSelected, errorSelected)) {
 							// Send current request now if duplicating
 							if (errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+								System.out.println("[ERRSIM=>SERVER]");
 								TFTP.printPacket(forwardedDataPacket);
 								sendReceiveServerSocket.send(forwardedDataPacket);
 							}
@@ -956,13 +975,14 @@ public class ErrorSimulator
 							PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, forwardedDataPacket, packetDelay);
 							packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 							packetDelayerThread.start();
-						} else if (errorSelected == ERROR_ACK_DATA_LOSS) {
+						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
 							// If request loss error, we dont send a packet at all
 							System.out.println("Withholding your packet.");
 						} else {
 							// Proceed as normal otherwise
 							tamperPacket(forwardedDataPacket, RECEIVED_FROM_CLIENT);
 							spawnUnknownTIDThread(forwardedDataPacket, serverAddressTID, serverPortTID);
+							System.out.println("[ERRSIM=>SERVER]");
 							TFTP.printPacket(forwardedDataPacket);
 							sendReceiveServerSocket.send(forwardedDataPacket);
 						}
@@ -980,6 +1000,7 @@ public class ErrorSimulator
 						// Receives acknowledgement packet from server
 						sendReceiveServerSocket.receive(ackPacket);
 						TFTP.shrinkData(ackPacket);
+						System.out.println("[SERVER=>ERRSIM]");
 						TFTP.printPacket(ackPacket);
 
 						// Sends acknowledgement packet to client
@@ -997,6 +1018,7 @@ public class ErrorSimulator
 									isDelayableError(modeSelected, errorSelected)) {
 							// Send current request now if duplicating
 							if (errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+								System.out.println("[ERRSIM=>CLIENT]");
 								TFTP.printPacket(forwardedAckPacket);
 								sendReceiveClientSocket.send(forwardedAckPacket);
 							}
@@ -1004,13 +1026,15 @@ public class ErrorSimulator
 							PacketDelayer packetDelayer = new PacketDelayer(sendReceiveClientSocket, forwardedAckPacket, packetDelay);
 							packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 							packetDelayerThread.start();
-						} else if (errorSelected == ERROR_ACK_DATA_LOSS) {
+						} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
 							// If request loss error, we dont send a packet at all
+							System.out.println("Withholding your packet.");
 						} else {
 							// Proceed as normal otherwise
 							// Sends data packet to client
 							tamperPacket(forwardedAckPacket, RECEIVED_FROM_SERVER);
 							spawnUnknownTIDThread(forwardedAckPacket, clientAddressTID, clientPortTID);
+							System.out.println("[ERRSIM=>CLIENT]");
 							TFTP.printPacket(forwardedAckPacket);
 							sendReceiveClientSocket.send(forwardedAckPacket);
 						}
@@ -1061,6 +1085,7 @@ public class ErrorSimulator
 				DatagramSocket socket = new DatagramSocket();
 
 				// Sends the packet to the host using this new TID
+				System.out.println("[ERRSIM=>UNKNOWN]");
 				socket.send(packet);
 				
 				// Error packet that is expected from the host
@@ -1076,6 +1101,7 @@ public class ErrorSimulator
 					// Receives invalid TID error packet
 					socket.receive(errorPacket);
 					TFTP.shrinkData(errorPacket);
+					System.out.println("[UNKNOWN=>ERRSIM]");
 					TFTP.printPacket(errorPacket);
 					
 					// Check if the address and port of the received packet match the TID

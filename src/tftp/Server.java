@@ -370,7 +370,7 @@ public class Server implements Exitable {
 							System.out.println("Timed out, resending.");
 							//if re-send attempt limit reached, 'give up' and cancel transfer
 							if(i == RESEND_LIMIT) {
-								System.out.println("No response from server after " + RESEND_LIMIT + " attempts. Try again later.");
+								System.out.println("No response from client after " + RESEND_LIMIT + " attempts. Try again later.");
 								socket.close();
 								return;
 							}
