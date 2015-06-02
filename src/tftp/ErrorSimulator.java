@@ -667,7 +667,7 @@ public class ErrorSimulator
 				int serverPortTID = -1;
 
 				// Flag set when transfer is finished
-				boolean transferComplete = false;
+				//boolean transferComplete = false;
 
 				// Flag set when error packet is received
 				boolean errorPacketReceived = false;
@@ -677,7 +677,8 @@ public class ErrorSimulator
 
 				try
 				{
-					while (!transferComplete)
+					while (true)
+					//while (!transferComplete)
 					{
 						// Creates a DatagramPacket to receive data packet from server
 						DatagramPacket dataPacket = TFTP.formPacket();
@@ -694,7 +695,7 @@ public class ErrorSimulator
 						// Transfer is complete if data block is less than MAX_DATA_SIZE
 						if (dataPacket.getLength() < TFTP.MAX_DATA_SIZE)
 						{
-							transferComplete = true;
+							//transferComplete = true;
 						}
 						TFTP.shrinkData(dataPacket);
 						System.out.println("[SERVER=>ERRSIM]");
@@ -746,8 +747,8 @@ public class ErrorSimulator
 
 						// End transfer if last packet received was an error packet
 						if (errorPacketReceived) {
-							transferComplete = true;
-							break;
+							//transferComplete = true;
+							//break;
 						}
 
 						// Creates a DatagramPacket to receive acknowledgement packet from client
@@ -801,9 +802,9 @@ public class ErrorSimulator
 						// Transfer is complete if client sends back an error packet
 						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE)
 						{
-							errorPacketReceived = true;
-							transferComplete = true;
-							break;
+							//errorPacketReceived = true;
+							//transferComplete = true;
+							//break;
 						}
 
 						if (isDelayableError(modeSelected, errorSelected)
@@ -815,7 +816,7 @@ public class ErrorSimulator
 							}
 						}
 					}
-					System.out.println("Connection terminated.\n");
+					//System.out.println("Connection terminated.\n");
 				}
 				finally
 				{
@@ -920,17 +921,18 @@ public class ErrorSimulator
 				sendReceiveClientSocket.send(forwardedFirstAckPacket);
 
 				// Flag set when transfer is finished
-				boolean transferComplete = false;
+				//boolean transferComplete = false;
 
 				// End transfer if last packet received was an error packet
 				if (errorPacketReceived)
 				{
-					transferComplete = true;
+					//transferComplete = true;
 				}
 
 				try
 				{
-					while (!transferComplete)
+					//while (!transferComplete)
+					while (true)
 					{
 						// Creates a DatagramPacket to receive data packet from client
 						DatagramPacket dataPacket = TFTP.formPacket();
@@ -947,7 +949,7 @@ public class ErrorSimulator
 						// Transfer is complete if data block is less than MAX_DATA_SIZE
 						if (dataPacket.getLength() < TFTP.MAX_DATA_SIZE)
 						{
-							transferComplete = true;
+							//transferComplete = true;
 						}
 						TFTP.shrinkData(dataPacket);
 						System.out.println("[CLIENT=>ERRSIM]");
@@ -996,8 +998,8 @@ public class ErrorSimulator
 						// End transfer if last packet received was an error packet
 						if (errorPacketReceived)
 						{
-							transferComplete = true;
-							break;
+							//transferComplete = true;
+							//break;
 						}
 
 						// Creates a DatagramPacket to receive acknowledgement packet from server
@@ -1049,20 +1051,21 @@ public class ErrorSimulator
 						// Transfer is complete if server sends back an error packet
 						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE)
 						{
-							transferComplete = true;
-							break;
+							//transferComplete = true;
+							//break;
+						}
+
+						if (isDelayableError(modeSelected, errorSelected)
+								&& packetDelayerThread != null) {
+							try {
+								// Wait for packet delayer to finish before closing sockets
+								packetDelayerThread.join();
+							} catch(InterruptedException e) {
+							}
 						}
 					}
 
-					if (isDelayableError(modeSelected, errorSelected)
-							&& packetDelayerThread != null) {
-						try {
-							// Wait for packet delayer to finish before closing sockets
-							packetDelayerThread.join();
-						} catch(InterruptedException e) {
-						}
-					}
-					System.out.println("Connection terminated.\n");
+					//System.out.println("Connection terminated.\n");
 				}
 				finally
 				{
