@@ -1,0 +1,608 @@
+SYSC 3303 Group 4 Iteration 3 Test Instructions
+===============================================
+
+Automated unit tests in the src/tftptest/ directory can be run using JUnit. (Please see the README.txt file for instructions on how to run the unit tests)
+
+
+
+The following tests were done manually and passed unless otherwise stated.
+
+=========================================================================================
+Iteration 4
+=========================================================================================
+
+Test Requirements
+
+=================
+
+[---Delay Packet---]
+
+01. WRQ packet from client to server got delayed, client should resend the WRQ request after waiting ACK 0 for 2 seconds. Server will respond to both WRQ, with the first WRQ successfully starts the file transfer process while the other receives an ERROR packet of error code 5 (Unknow TID).
+
+02. During a WRQ transfer, if ACK 0 from server got delayed, client will resend the WRQ request for another 2 seconds wait cycle. Once the delayed ACK 0 packet arrive, client proceeds to the DATA 1 packet. For the resent WRQ packet, client will respond the duplicate ACK 0 with ERROR packet of error code 5 (In reality, the second ACK 0 may arrive first instead of the delayed one. Client will behave the same: responds to whichever comes first and sends error code 5 to the other).
+
+03. DATA packet from client to server during a WRQ transfer got delayed, client should resend the delayed DATA packet for another 2 seconds wait cycle for the corresponding ACK packet to arrive. Once the resent and delayed DATA packet arrive, client should receive two identical ACK packets for previous block. Server will only write to the file once while client only responding to the first ACK with the next DATA packet, ignore the duplicate ACK and wait for the next packet to arrive.
+
+04. ACK packet (except for ACK 0) from server to client during a WRQ transfer got delayed, client should resend the DATA packet. Once the delayed ACK packet arrive, client proceeds to the next DATA packet. For the resent ACK packet, client will ignore the duplicate ACK and wait for the next packet to arrive (In reality, the resent ACK may arrive first instead of the delayed one. Client will behave the same: respond to whichever comes first and ignore the other).
+
+05. RRQ packet from client to server got delayed, client should resend the RRQ request after waiting DATA 1 for 2 seconds. Server will respond to both RRQ, with the first RRQ successfully starts the file transfer process while the other receives an ERROR packet of error code 5 (Unknow TID).
+
+06. During a RRQ transfer, if DATA 1 from server to client got delayed, client will resend the RRQ request for another 2 seconds wait cycle. Once the delayed DATA 1 packet arrive, client proceeds to the ACK 1 packet. For the resent RRQ packet, client will respond the duplicate DATA 1 with ERROR packet of error code 5 (In reality, the second DATA 1 may arrive first instead of the delayed one. Client will behave the same: responds to whichever comes first and sends error code 5 to the other).
+
+07. DATA packet (except for DATA 1) from server to client during a RRQ transfer got delayed, server should resend the DATA packet for another 2 seconds wait cycle for the corresponding ACK packet to arrive. Once the resent and delayed DATA packet arrive, server should receive two identical ACK packets. Client will only write to the file once while server only responding to the first ACK with the next DATA packet, ignore the duplicate ACK and wait for the next packet to arrive.
+
+08. ACK packet from client to server during a RRQ transfer got delayed, server should resend the DATA packet. Once the delayed ACK packet arrive, server proceeds to the next DATA packet. For the resent ACK packet, server will ignore the duplicate ACK and wait for the next packet to arrive (In reality, the resent ACK may arrive first instead of the delayed one. Server will behave the same: respond to whichever comes first and ignore the other).
+
+[---Lost Packet---]
+
+09. WRQ packet from client to server got lost, client should resend the WRQ packet and server respond with ACK 0. The file transfer should remain working after the resent WRQ packet.
+
+10. During a WRQ transfer, if ACK 0 from server got lost, client should resend the WRQ packet and server respond with ACK 0. Client will use the newly generated TID from ACK 0 for remaining of the transfer process and the transfer should work as usual.
+
+11. DATA packet from client to server during a WRQ transfer got lost, after a 2 seconds wait time for the corresponding ACK, the client will resend the DATA packet for another 2 seconds wait cycle. Once the client receives the ACK for the resent DATA packet, the rest of the file transfer process should remain working as usual.
+
+12. ACK packet from server to client during a WRQ transfer got lost, after a 2 seconds wait time for the corresponding ACK, the client will resend the DATA packet for another 2 seconds wait cycle. Once the client receives the ACK for the resent DATA packet, the rest of the file transfer process should remain working as usual.
+
+13. RRQ packet from client to server got lost, client should resend the RRQ packet and server respond with DATA 1. The file transfer should remain working after the resent RRQ packet.
+
+14. During a RRQ transfer, if DATA 1 from server got lost, client should resend the WRQ packet and server respond with DATA 1. Client will use the newly generated TID from DATA 1 for remaining of the transfer process and the transfer should work as usual.
+
+15. DATA packet from server to client during a RRQ transfer got lost, after a 2 seconds wait time for the corresponding ACK, the server will resend the DATA packet for another 2 seconds wait cycle. Once the server receives the ACK for the resent DATA packet, the rest of the file transfer process should remain working as usual.
+
+16. ACK packet from client to server during a RRQ transfer got lost, after a 2 seconds wait time for the corresponding ACK, the server will resend the DATA packet for another 2 seconds wait cycle. Once the server receives the ACK for the resent DATA packet, the rest of the file transfer process should remain working as usual.
+
+[---Duplicate Packet---]
+
+17. If duplicate WRQ packets received from client, server should respond to both requests by opening up a new TID for transfer and sending back ACK 0. Client will respond to the first received ACK 0 with DATA 1, while sending an ERROR packet of error code 5 (Unknown TID) for the other ACK 0.
+
+18. If duplicate DATA packets during a WRQ transfer received from client, server should respond to both of the DATA packets with corresponding ACKs.
+
+19. If duplicate ACK packets during a WRQ transfer received from server, client should respond to the first ACK with the corresponding DATA packet. For the other ACK packet, client will ignore it and wait for next packet to arrive.
+
+20. If duplicate RRQ packets received from client, server should respond to both requests by opening up a new TID for transfer and sending back DATA 1. Client will respond to the first received DATA 1 with ACK 1, while sending an ERROR packet of error code 5 (Unknown TID) for the other DATA 1.
+
+21. If duplicate DATA packets during a RRQ transfer received from server, client should respond to both of the DATA packets with corresponding ACKs.
+
+22. If duplicate ACK packets during a RRQ transfer received from client, server should respond to the first ACK with the corresponding DATA packet. For the other ACK packet, server will ignore it and wait for next packet to arrive.
+
+Note:
+  For any packets, if the deleyed time is longer than 6 seconds (3 tries with each of 2 seconds wait cycle), the connection should abort and the file transfer process will be terminated.
+
+=================
+
+Manual Test Plan
+
+=================
+
+[---Delayed Packet---]
+
+01. Delayed WRQ packet: []
+	1. In Error Simulator console enter 2 (RRQ/WRQ packets) in the first menu
+	2. In the second menu enter 7 (Request delay)
+	3. In the third menu enter the amount of delayed time in ms, for example 3000, for the simulation (less than 6000)
+	4. Initialize the server with a valid directory
+	5. Initialize a correct WRQ from the client
+	6. Verify that the transfer behave like decribed in Test Requirements section once the valid WRQ has been specified
+
+02. Delayed ACK 0 packet during WRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 5 (ACK/DATA delay)
+	3. In the third menu enter 2 (Server will cause the simulated error)
+	4. Enter a block number of 0 to simulate ACK 0
+	5. Initialize the server with a valid directory
+	6. Initialize a correct WRQ from the client
+	7. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+03. Delayed DATA packet during WRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 5 (ACK/DATA delay)
+	3. In the third menu enter 1 (Client will cause the simulated error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. Initialize the server with a valid directory
+	6. Initialize a correct WRQ from the client
+	7. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+04. Delayed ACK packet during WRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 5 (ACK/DATA delay)
+	3. In the third menu enter 2 (Server will cause the simulated error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. Initialize the server with a valid directory
+	6. Initialize a correct WRQ from the client
+	7. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+05. Delayed RRQ packet: []
+	1. In Error Simulator console enter 2 (RRQ/WRQ packets) in the first menu
+	2. In the second menu enter 7 (Request delay)
+	3. In the third menu enter the amount of delayed time in ms, for example 3000, for the simulation (less than 6000)
+	4. Initialize the server with a valid directory
+	5. Initialize a correct RRQ from the client
+	6. Verify that the transfer behave like decribed in Test Requirements section once the valid WRQ has been specified
+
+06. Delayed DATA 1 packet during RRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 5 (ACK/DATA delay)
+	3. In the third menu enter 2 (Server will cause the simulated error)
+	4. Enter a block number of 1 to simulate DATA 1
+	5. Initialize the server with a valid directory
+	6. Initialize a correct RRQ from the client
+	7. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+07. Delayed DATA packet during RRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 5 (ACK/DATA delay)
+	3. In the third menu enter 2 (Server will cause the simulated error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. Initialize the server with a valid directory
+	6. Initialize a correct RRQ from the client
+	7. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+08. Delayed ACK packet during RRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 5 (ACK/DATA delay)
+	3. In the third menu enter 1 (Client will cause the simulated error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. Initialize the server with a valid directory
+	6. Initialize a correct RRQ from the client
+	7. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+[---Lost Packet---]
+
+09. Lost WRQ packet: []
+	1. In Error Simulator console enter 2 (RRQ/WRQ packets) in the first menu
+	2. In the second menu enter 9 (Request loss)
+	3. Initialize the server with a valid directory
+	4. Initialize a correct WRQ from the client
+	5. Verify that the transfer behave like decribed in Test Requirements section once the valid WRQ has been specified
+
+10. Lost ACK 0 packet during WRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 7 (ACK/DATA loss)
+	3. In the third menu enter 2 (Server will cause the simulated error)
+	4. Enter a block number of 0 to simulate ACK 0
+	5. Initialize the server with a valid directory
+	6. Initialize a correct WRQ from the client
+	7. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+11. Lost DATA packet during WRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 7 (ACK/DATA loss)
+	3. In the third menu enter 1 (Client will cause the simulated error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. Initialize the server with a valid directory
+	6. Initialize a correct WRQ from the client
+	7. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+12. Lost ACK packet during WRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 7 (ACK/DATA loss)
+	3. In the third menu enter 2 (Server will cause the simulated error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. Initialize the server with a valid directory
+	6. Initialize a correct WRQ from the client
+	7. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+13. Lost RRQ packet: []
+	1. In Error Simulator console enter 2 (RRQ/WRQ packets) in the first menu
+	2. In the second menu enter 9 (Request delay)
+	3. Initialize the server with a valid directory
+	4. Initialize a correct RRQ from the client
+	5. Verify that the transfer behave like decribed in Test Requirements section once the valid WRQ has been specified
+
+14. Lost DATA 1 packet during RRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 7 (ACK/DATA loss)
+	3. In the third menu enter 2 (Server will cause the simulated error)
+	4. Enter a block number of 1 to simulate DATA 1
+	5. Initialize the server with a valid directory
+	6. Initialize a correct RRQ from the client
+	7. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+15. Lost DATA packet during RRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 7 (ACK/DATA loss)
+	3. In the third menu enter 2 (Server will cause the simulated error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. Initialize the server with a valid directory
+	6. Initialize a correct RRQ from the client
+	7. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+16. Lost ACK packet during RRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 7 (ACK/DATA loss)
+	3. In the third menu enter 1 (Client will cause the simulated error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. Initialize the server with a valid directory
+	6. Initialize a correct RRQ from the client
+	7. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+[---Duplicate Packet---]
+
+17. Duplicate WRQ packet: []
+	1. In Error Simulator console enter 2 (RRQ/WRQ packets) in the first menu
+	2. In the second menu enter 8 (Request duplicate)
+	3. In the third menu enter the amount of delayed time in ms, for example 3000, for the simulation
+	3. Initialize the server with a valid directory
+	4. Initialize a correct WRQ from the client
+	5. Verify that the transfer behave like decribed in Test Requirements section once the valid WRQ has been specified
+
+18. Duplicate DATA packet during WRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 6 (ACK/DATA duplicate)
+	3. In the third menu enter 1 (Client will cause the simulated error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. In the last menu enter the amount of delayed time in ms, for example 3000, for the simulation
+	6. Initialize the server with a valid directory
+	7. Initialize a correct WRQ from the client
+	8. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+19. Duplicate ACK packet during WRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 6 (ACK/DATA duplicate)
+	3. In the third menu enter 2 (Server will cause the simulated error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. In the last menu enter the amount of delayed time in ms, for example 3000, for the simulation
+	6. Initialize the server with a valid directory
+	7. Initialize a correct WRQ from the client
+	8. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+20. Duplicate RRQ packet: []
+	1. In Error Simulator console enter 2 (RRQ/WRQ packets) in the first menu
+	2. In the second menu enter 8 (Request duplicate)
+	3. In the third menu enter the amount of delayed time in ms, for example 3000, for the simulation
+	3. Initialize the server with a valid directory
+	4. Initialize a correct RRQ from the client
+	5. Verify that the transfer behave like decribed in Test Requirements section once the valid WRQ has been specified
+
+21. Duplicate DATA packet during RRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 6 (ACK/DATA duplicate)
+	3. In the third menu enter 2 (Server will cause the simulated error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. In the last menu enter the amount of delayed time in ms, for example 3000, for the simulation
+	6. Initialize the server with a valid directory
+	7. Initialize a correct RRQ from the client
+	8. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+22. Duplicate ACK packet during RRQ transfer: []
+	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
+	2. In the second menu enter 6 (ACK/DATA duplicate)
+	3. In the third menu enter 1 (Client will cause the simulated error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. In the last menu enter the amount of delayed time in ms, for example 3000, for the simulation
+	6. Initialize the server with a valid directory
+	7. Initialize a correct RRQ from the client
+	8. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
+
+
+=========================================================================================
+Iteration 3
+=========================================================================================
+
+Test Requirements
+
+=================
+
+01. Error Code 5: (Unknown transfer ID) Should be sent from server if the server receives an ACK/DATA packet from an unexpected source (not the source the transfer was initialized from). Server continues to run.	[Checked]
+
+02. Error Code 5: (Unknown transfer ID) Should be sent from client if the client receives an ACK/DATA packet from an unexpected source (not the source the transfer was initialized with). Client continues to run.	[Checked]
+
+03. Error Code 4: (Illegal TFTP operation) Should be sent from client to server if the client receives a packet from the server with an invalid opcode (anything other than 01 - RRQ, 02 - WRQ, 03 - DATA, 04 - ACK, or 05 - ERROR)	[Checked]
+
+04. Error Code 4: (Illegal TFTP operation) Should be sent from sever to client if the server receives a packet from the client with an invalid opcode (anything other than 01 - RRQ, 02 - WRQ, 03 - DATA, 04 - ACK, or 05 - ERROR)	[Checked]
+
+05. Error Code 4: (Illegal TFTP operation) Should be sent from client to server if the client receives an ACK/DATA packet from the server with an invalid block number (not the expected sequential value)	[Checked]
+
+06. Error Code 4: (Illegal TFTP operation) Should be sent from sever to client if the server receives an ACK/DATA packet from the client with an invalid block number (not the expected sequential value)	[Checked]
+
+07. Error Code 4: (Illegal TFTP operation) Should be sent from client to server if the client receives a packet from the server that is larger that 512 bytes	
+
+
+08. Error Code 4: (Illegal TFTP operation) Should be sent from sever to client if the server receives a packet from the client that is larger that 512 bytes
+
+09. Error Code 4: (Illegal TFTP operation) Should be sent from sever to client if the server receives a RRQ/WRQ packet from the client that is missing a file name or mode (only one 0-terminated section in the packet)
+
+10. Error Code 4: (Illegal TFTP operation) Should be sent from sever to client if the server receives a RRQ/WRQ packet from the client that with an invalid mode, anything other than "netascii" or "octet" (in any case)
+
+11. Error Code 4: (Illegal TFTP operation) Should be sent from sever to client if the server receives a RRQ/WRQ packet from the client that doesn't end with a 0 (final 0 'lost')
+
+12. Error Code 4: (Illegal TFTP operation) Should be sent from sever to client if the server receives a RRQ/WRQ packet from the client that doesn't terminate after the final 0
+
+
+
+Manual Test Plan
+
+=========
+01.
+	1. In Error Simulator console enter 2 (ACK/DATA Packet) in the first menu
+	2. In the second menu enter 3 (Unknown transfer ID)
+	3. In the third menu enter 1 (Client receives packet containing error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. Initialize a correct RRQ or a WRQ from the client
+	6. Once the transfer has reached the specified block number, verify that error packet code 5 was received and the client and server continue to run
+	
+
+
+02.
+	1. In first menu in the Error Simulator console enter 2 (ACK/DATA Packet) in the first menu
+	2. In the second menu enter 3 (Unknown transfer ID)
+	3. In the third menu enter 2 (Server receives packet containing error)
+	4. Enter a block number for the error to be simulated in (any number so long as it is in the range of what will be sent in the file)
+	5. Initialize a correct RRQ or WRQ from the client
+	6. Once the transfer has reached the specified block number, verify that error packet code 5 (Unknown transfer ID) was received and the client and server continue to run
+NOTE: Since we are spawning a thread in the ErrorSimulator to simulate error code 5. The expected error code 5 packet may not be received during the same round of block transfer.
+
+03.
+	1. In first menu in the Error Simulator console enter 1 (RRQ/WRQ Packet) (Also tested with ACK/DATA Packet but the following steps in the menu will be slightly different)
+	2. In the second menu enter 2 (Invalid TFTP Opcode)
+	3. Initialize a correct RRQ or a WRQ from the client
+	4. Verify that error packet code 4 (Illegal TFTP operation) is received and the connection is terminated
+	
+04.
+	1. In first menu in the Error Simulator console enter 2 (ACK/DATA Packet)
+	2. In the second menu enter 3 (Invalid TFTP Opcode)
+	3. In the third menu enter 1 (Client receives packet containing error)
+	4. Initialize a correct RRQ or a WRQ from the client
+	5. Verify that error packet code 4 (Illegal TFTP operation) is received and the connection is terminated
+	
+05.
+	1. In first menu in the Error Simulator console enter 2 (ACK/DATA Packet) 
+	2. In the second menu enter 3 (Invalid block number)
+	3. In the third menu enter 1 (Client receives packet containing error)
+	4. Initialize a correct RRQ or WRQ from the client
+	5. Verify that error packet code 4 (Illegal TFTP operation) is received and the connection is terminated
+
+06.
+	1. In first menu in the Error Simulator console enter 2 (ACK/DATA Packet) 
+	2. In the second menu enter 3 (Invalid block number)
+	3. In the third menu enter 2 (Server receives packet containing error)
+	4. Initialize a correct RRQ or WRQ from the client
+	5. Verify that error packet code 4 (Illegal TFTP operation) is received and the connection is terminated 
+
+07.
+	1. In first menu in the Error Simulator console enter 1 (RRQ/WRQ Packet) (Tested with ACK/DATA Packet but the following steps in the menu will be slightly different)
+	2. In the second menu select 1 (Packet too large)
+	3. Initialize a correct RRQ or WRQ from the client
+	4. Verify that error packet code 4 (Illegal TFTP operation) is received and the connection is terminated 
+	
+08.
+	1. In first menu in the Error Simulator console enter 2 (ACK/DATA Packet) 
+	2. In the second menu enter 1 (Packet too large)
+	3. In the third menu enter 1 (Client receives packet containing error)
+	4. Initialize a correct RRQ or WRQ from the client
+	5. Verify that error packet code 4 (Illegal TFTP operation) is received and the connection is terminated
+
+09.
+	1. In first menu in the Error Simulator console enter 1 (RRQ/WRQ Packet)
+	2. In the second menu select 4 (Missing file name)
+	4. Initialize a correct RRQ or WRQ from the client
+	5. Verify that error packet code 4 (Illegal TFTP operation) is received and the connection is terminated
+
+10.
+	1. In first menu in the Error Simulator console enter 1 (RRQ/WRQ Packet)
+	2. In the second menu select 3 (Invalid mode)
+	4. Initialize a correct RRQ or WRQ from the client
+	5. Verify that error packet code 4 (Illegal TFTP operation) is received and the connection is terminated
+
+11.
+	1. In first menu in the Error simulator console enter 1 (RRQ/WRQ Packet)
+	2. In the second menu select 6 (Final 0 is lost)
+	4. Initialize a correct RRQ or WRQ from the client
+	5. Verify that error packet code 4 (Illegal TFTP operation) is received and the connection is terminated
+	
+12.
+	1. In first menu in the Error Simulator console enter 1 (RRQ/WRQ Packet)
+	2. In the second menu select 5 ( Packet does not terminate after final 0)
+	4. Initialize a correct RRQ or WRQ from the client
+	5. Verify that error packet code 4 (Illegal TFTP operation) is received and the connection is terminated	
+	
+	
+	
+=========================================================================================
+Iteration 2
+=========================================================================================
+
+
+Test Requirements
+
+=================
+
+
+Error Packet Requirements
+
+01. Error packet code 1 (file not found) should be sent from server to client if the client sends a RRQ to the server for a non existent file
+
+02. Error packet code 1 (file not found) should NOT be sent from client to server if the client tries to send a WRQ for a non existent file (instead, the user should be notified that the file was not found)
+
+03. Error packet code 2 (file access violation) should be sent from server to client if the client sends a RRQ to the server for a non-readable file
+
+04. Error packet code 2 (file access violation) should NOT be sent from client to server if the client tries to send a WRQ for a non-readable file (instead, the client should be notified that there was a file access violation)
+
+05. Error packet code 2 (file access violation) should be sent from server to client if the client sends a WRQ to the server for a file that exists on the server and is non-writeable
+
+06. Error packet code 2 (file access violation) should NOT sent from client to server if the client sends a RRQ to the server for a file that exists on the client and is non-writeable (instead, the client should be notified that the file already exists since we do not allow clients to overwrite their own files)
+
+07. Error packet code 3 (disk full) should be sent from the server to client if the client sends a WRQ to the server and the server's file system becomes full in the process of sending the file
+
+08. Error packet code 3 (disk full) should be sent from the client to server if the client sends a RRQ to the server and the client's file system becomes full in the process of sending the file
+
+
+
+Test Plan
+
+=========
+
+
+Error Packet Test Plan:
+
+
+ErrorPacket01.
+1. From the Client, send a RRQ to the Server for a file that does not exist on the Server
+2. Verify that error packet code 1 (file not found) is received and the connection is terminated
+
+ErrorPacket02.
+1. From the Client, send a WRQ to the Server for a file that does not exist on the Client
+2. Verify that NO packet is sent, and the client is notified that the file is not found
+
+ErrorPacket03.
+1. From the Client, send a RRQ to the Server for a file that is non-readable (on the server)
+2. Verify that error packet code 2 (file access violation) is received and the connection is terminated
+
+ErrorPacket04.
+1. From the Client, send a WRQ to the Server for a file that is non-readable (on the client)
+2. Verify that error packet code 2 (file access violation) is received and the connection is terminated
+
+ErrorPacket05.
+1. From the Client, send a WRQ to the server for a file that that exists and is non-writable (on the Server)
+2. Verify that error packet code 2 (file access violation) is received and the connection is terminated
+
+ErrorPacket06.
+1. From the Client, send a RRQ to the server for a file that that exists and is non-writable (on the Client)
+2. Verify that NO packet is sent, and the client is notified that the file exists (since we do not allow overwrite on the Client)
+
+ErrorPacket07.
+1. From the Client, send a WRQ to the server for a file that would be larger than the amount of space left on the Server's file system
+2. Verify that the transfer progresses as expected until the space is filled up
+3. Verify that error packet code 3 (disk full) is received and the connection is terminated
+4. Verify that the no "half written" file is left on the Server's file system
+
+ErrorPacket08.
+1. From the Client, send a RRQ to the server for a file that would be larger than the amount of space left on the Client's file system
+2. Verify that the transfer progresses as expected until the space is filled up
+3. Verify that error packet code 3 (disk full) is sent to the Server and the connection is terminated
+4. Verify that the no "half written" file is left on the Client's file system
+
+
+
+=========================================================================================
+Iteration 1
+=========================================================================================
+
+Test Requirements
+
+=================
+
+
+Client Requirements
+
+01. Client should successfully write any file to Server
+02. Client should successfully read any file from Server
+03. Client should successfully write empty file to Server
+04. Client should successfully read empty file from Server
+05. Client should successfully write a file that has size that is a multiple of 512 bytes to the Server
+06. Client should successfully read a file that has size that is a multiple of 512 bytes from the Server
+07. Client should successfully write a file that is larger than 33553920 bytes (65535 blocks * 512 bytes/block) to the Server
+08. Client should successfully read a file that is larger than 33553920 bytes (65535 blocks * 512 bytes/block) from the Server
+09. Client should successfully write files of different file extentions to the Server
+10. Client should successfully read files of different file extentions to the Server
+11. Client should only support one file transfer at a time
+12. Client should support a command to exit gracefully
+
+
+-----------------------------------------------------------------------------------------
+
+
+Server Requirements (some requirements are handled in previous listings)
+
+01. Server should support multiple concurrent file transfers from different Clients
+02. Server should overwrite files if one with the same name already exists
+03. Server should support a command to exit gracefully
+04. Server should finish all running file transfers before exiting
+05. Server should ignore any new requests following an exit command
+
+
+
+
+Test Plan
+
+=========
+
+
+Client Test Plan:
+
+
+Client01.
+1. From the Client, send a write request to the Server for "small.txt"
+2. Verify that Server successfully receives "small.txt"
+
+Client02.
+1. From the Client, send a read request to the Server for "small.txt"
+2. Verify that Client successfully receives "small.txt"
+
+Client03.
+1. From the Client, send a write request to the Server for "empty.txt"
+2. Verify that Server successfully receives "empty.txt"
+
+Client04.
+1. From the Client, send a read request to the Server for "empty.txt"
+2. Verify that Client successfully receives "empty.txt"
+
+Client05.
+1. From the Client, send a write request to the Server for "512exact.txt"
+2. Verify that Server successfully receives "512exact.txt"
+3. From the Client, send a write request to the Server for "1024exact.txt"
+4. Verify that Server successfully receives "1024exact.txt"
+
+Client06.
+1. From the Client, send a read request to the Server for "512exact.txt"
+2. Verify that Client successfully receives "512exact.txt"
+3. From the Client, send a read request to the Server for "1024exact.txt"
+4. Verify that Server successfully receives "1024exact.txt"
+
+Client07.
+1. From the Client, send a write request to the Server for "toolarge.txt"
+2. Verify that Server successfully receives "toolarge.txt"
+3. Verify that the block number "wraps around" back to 0 after it goes past 65535
+
+Client08.
+1. From the Client, send a read request to the Server for "toolarge.txt"
+2. Verify that Client successfully receives "toolarge.txt"
+3. Verify that the block number "wraps around" back to 0 after it goes past 65535
+
+Client09.
+1. From the Client, send a write request to the Server for "menu.png"
+2. Verify that Server successfully receives "menu.png"
+
+Client10.
+1. From the Client, send a read request to the Server for "menu.png"
+2. Verify that Client successfully receives "menu.png"
+
+Client11.
+1. From the Client, send a write request to the Server for "large.txt"
+2. From the Client, while "large.txt" is being sent, try to send another file
+3. Verify that no other file can be sent
+4. Verify that Server successfully receives "large.txt"
+
+Client12.
+1. From the Client, verify that there are no current transfers are in progress
+2. Input the exit command
+3. Verify that the Client successfully exits
+
+
+-----------------------------------------------------------------------------------------
+
+
+Server Test Plan:
+
+
+Server01.
+1. From the Client, send a write request to the Server for "large.txt"
+2. From a different Client (must use a different port), while "large.txt" is being sent, send a write request to the Server for "small.txt"
+3. Verify that Server successfully receives "small.txt"
+4. Verify that Server successfully receives "large.txt"
+
+Server02.
+1. From the Client, send a write request to the Server for "small.txt"
+2. Verify that Server successfully receives "small.txt"
+3. Append "success!" to the end of the "small.txt" file
+4. From the Client, send a write request to the Server for "small.txt"
+5. Verify that Server successfully receives "small.txt"
+6. Verify that the "small.txt" on the server now has "success!" appended to file
+
+Server03 && Server04 && Server05.
+1. From the Client, send a write request to the Server for "large.txt"
+2. From the Server, while "large.txt" is being sent, input the exit command
+3. From a different Client (must use a different port), while "large.txt" is being sent, send a write request to the Server for "small.txt"
+4. Verify that the Server does NOT receive "small.txt" (Since the server should reject file transfers after exit command)(Client should hang because it is waiting for an ack)
+5. Verify that the Server successfully receives "large.txt"
+6. Verify that the Server successfully exits after "large.txt" is finished being sent
