@@ -806,10 +806,12 @@ public class ErrorSimulator
 							break;
 						}
 
-						try {
-							// Wait for packet delayer to finish before closing sockets
-							packetDelayerThread.join();
-						} catch(InterruptedException e) {
+						if (isDelayableError(modeSelected, errorSelected)) {
+							try {
+								// Wait for packet delayer to finish before closing sockets
+								packetDelayerThread.join();
+							} catch(InterruptedException e) {
+							}
 						}
 					}
 					System.out.println("Connection terminated.\n");
@@ -1048,6 +1050,14 @@ public class ErrorSimulator
 						{
 							transferComplete = true;
 							break;
+						}
+					}
+
+					if (isDelayableError(modeSelected, errorSelected)) {
+						try {
+							// Wait for packet delayer to finish before closing sockets
+							packetDelayerThread.join();
+						} catch(InterruptedException e) {
 						}
 					}
 					System.out.println("Connection terminated.\n");
