@@ -36,6 +36,7 @@ lib/hamcrest-core-1.3.jar
 Other:
 TEST.txt (testing instructions and summary for this and previous iterations)
 diagrams.pdf - Class diagram, timing diagrams, and unchanged diagrams from previous iteration
+uml-class-diagram.jpg
 
 
 INSTRUCTIONS FOR RUNNING:

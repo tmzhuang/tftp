@@ -6,3 +6,6 @@ tmp
 *.classpath
 *.metadata
 /bin
+Thumbs.db
+Thumbs.*
+*.db
