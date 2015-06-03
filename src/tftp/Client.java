@@ -230,7 +230,7 @@ public class Client implements Exitable {
 								r.getFileName() + " could not be transferred because of an illegal TFTP operation (client expected an ACK packet with block#: " + currentBlockNumber + ")");
 
 						// Sends error packet
-						TFTP.printPacket(errorPacket);
+						//TFTP.printPacket(errorPacket);
 						sendReceiveSocket.send(errorPacket);
 
 						// Echo error message
@@ -366,7 +366,7 @@ public class Client implements Exitable {
 								r.getFileName() + " could not be transferred because of an illegal TFTP operation (client expected a DATA packet with block#: " + currentBlockNumber + ")");
 
 						// Sends error packet
-						TFTP.printPacket(errorPacket);
+						//TFTP.printPacket(errorPacket);
 						sendReceiveSocket.send(errorPacket);
 
 						// Echo error message
