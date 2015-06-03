@@ -612,6 +612,8 @@ public class ErrorSimulator
 	{
 		private DatagramPacket clientRequestPacket;
 
+		private boolean errorSimulated = false;
+		
 		public ReadTransferHandler(DatagramPacket clientRequestPacket)
 		{
 			System.out.println("Creating new ReadTransferHander");
@@ -648,9 +650,11 @@ public class ErrorSimulator
 					PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, serverRequestPacket, packetDelay);
 					packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 					packetDelayerThread.start();
+					errorSimulated = true;
 				} else if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_LOSS) {
 					// If request loss error, we don't send a packet at all
 					System.out.println("Withholding packet RRQ.");
+					errorSimulated = true;
 				} else {
 					// Proceed as normal otherwise
 					tamperPacket(serverRequestPacket, RECEIVED_FROM_CLIENT);
@@ -689,8 +693,8 @@ public class ErrorSimulator
 						System.out.println("Waiting on DATA packet from server.");
 						sendReceiveServerSocket.receive(dataPacket);
 						
-						// Transfer is complete if server sends back an error packet
-						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE)
+						// Transfer is complete if server sends back an error packet (other than error 5)
+						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE && !(TFTP.getErrorCode(dataPacket)==5))
 						{
 							errorPacketReceived = true;
 						}
@@ -698,7 +702,7 @@ public class ErrorSimulator
 						// Transfer is complete if data block is less than MAX_DATA_SIZE
 						if (dataPacket.getLength() < TFTP.MAX_DATA_SIZE)
 						{
-							//transferComplete = true;
+						//	transferComplete = true;
 						}
 						TFTP.shrinkData(dataPacket);
 						System.out.println("[SERVER=>ERRSIM]");
@@ -721,7 +725,7 @@ public class ErrorSimulator
 						// 1. Cause is server
 						// 2. Block number matches the one selected by user
 						// 3. Error simulator is simulating a network error
-						if (causeSelected == RECEIVED_FROM_SERVER &&
+						if (!errorSimulated && causeSelected == RECEIVED_FROM_SERVER &&
 									!TFTP.verifyErrorPacket(forwardedDataPacket) &&
 									!packetLossTriggered &&
 									blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) { 
@@ -755,8 +759,8 @@ public class ErrorSimulator
 						
 						// End transfer if last packet received was an error packet
 						if (errorPacketReceived) {
-							//transferComplete = true;
-							//break;
+						//	transferComplete = true;
+						//	break;
 						}
 
 						// Creates a DatagramPacket to receive acknowledgment packet from client
@@ -816,8 +820,8 @@ public class ErrorSimulator
 						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE)
 						{
 							//errorPacketReceived = true;
-							//transferComplete = true;
-							//break;
+						//	transferComplete = true;
+						//	break;
 						}
 
 						if (isDelayableError(modeSelected, errorSelected)
@@ -889,6 +893,7 @@ public class ErrorSimulator
 					PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, serverRequestPacket, packetDelay);
 					packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 					packetDelayerThread.start();
+					System.out.println("Delaying a packet.");
 				} else if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_LOSS) {
 					// If request loss error, we don't send a packet at all
 					System.out.println("Withholding packet " + blockNumberSelected + ".");
@@ -987,7 +992,7 @@ public class ErrorSimulator
 									!TFTP.verifyErrorPacket(forwardedDataPacket) &&
 									!packetLossTriggered &&
 									blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) { 
-							if (isDelayableError(modeSelected, errorSelected)) {
+							if (isDelayableError(modeSelected, errorSelected) && modeSelected == MODE_DATA_ACK) {
 								// Send current request now if duplicating
 								if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
 									System.out.println("[ERRSIM=>SERVER]");
