@@ -699,9 +699,10 @@ public class ErrorSimulator
 						sendReceiveServerSocket.receive(dataPacket);
 						
 						// Transfer is complete if server sends back an error packet (other than error 5)
-						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE && !(TFTP.getErrorCode(dataPacket)==TFTP.ERROR_CODE_UNKNOWN_TID))
+						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE)
 						{
-							errorPacketReceived = true;
+							if(!(TFTP.getErrorCode(dataPacket)==TFTP.ERROR_CODE_UNKNOWN_TID))
+								errorPacketReceived = true;
 						}
 
 						// Transfer is complete if data block is less than MAX_DATA_SIZE
@@ -825,12 +826,15 @@ public class ErrorSimulator
 							sendReceiveServerSocket.send(forwardedAckPacket);
 						}
 
-						// Transfer is complete if client sends back an error packet
-						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE && TFTP.getErrorCode(dataPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID)
+						// Transfer is complete if client sends back an error packet other than error 5
+						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE)
 						{
-							errorPacketReceived = true;
-							transferComplete = true;
-							break;
+							if(TFTP.getErrorCode(dataPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID)
+									{
+										errorPacketReceived = true;
+										transferComplete = true;
+										break;
+									}
 						}
 
 						if (isDelayableError(modeSelected, errorSelected)
@@ -974,9 +978,11 @@ public class ErrorSimulator
 						sendReceiveClientSocket.receive(dataPacket);
 
 						// Transfer if client sends back an error packet other than error code 5
-						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE && TFTP.getErrorCode(dataPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID)
+						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE)
 						{
-							errorPacketReceived = true;
+							if(TFTP.getErrorCode(dataPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID){
+								errorPacketReceived = true;
+							}
 						}
 
 						// Transfer is complete if data block is less than MAX_DATA_SIZE
@@ -1100,10 +1106,13 @@ public class ErrorSimulator
 						
 
 						// Transfer is complete if server sends back an error packet
-						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE && TFTP.getErrorCode(dataPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID)
+						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE)
 						{
-						//	transferComplete = true;
-							break;
+							if(TFTP.getErrorCode(dataPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID)
+							{
+								//	transferComplete = true;
+								break;
+							}
 						}
 
 						if (isDelayableError(modeSelected, errorSelected)
