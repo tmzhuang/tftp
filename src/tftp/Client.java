@@ -309,7 +309,7 @@ public class Client implements Exitable {
 							i = RESEND_LIMIT+1;		//If packet successfully received, leave loop
 					} catch(SocketTimeoutException e) {
 						//if re-send attempt limit reached, 'give up' and cancel transfer
-						if(i == RESEND_LIMIT)
+						if(i == RESEND_LIMIT-1)
 						{
 							System.out.println("No response from server after " + RESEND_LIMIT + " attempts. Try again later.");
 							return;
