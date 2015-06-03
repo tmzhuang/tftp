@@ -249,6 +249,8 @@ public class Client implements Exitable {
 				}
 				
 				if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received."); //addr = " + receivePacket.getAddress().toString() + ", port = " + receivePacket.getPort());
+				// Newline
+				if (verbose) System.out.println();
 			} catch(Exception e) {
 				System.out.println(e.getMessage());
 			}

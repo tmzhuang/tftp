@@ -313,7 +313,8 @@ public class Server implements Exitable {
 						}
 
 					if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received.");
-					
+					// Newline
+					if (verbose) System.out.println();
 					transferComplete = dataPacketQueue.isEmpty();
 					packetInOrder = TFTP.checkPacketInOrder(receivePacket, currentBlockNumber);
 				
@@ -452,6 +453,8 @@ public class Server implements Exitable {
 
 					// Echo successful data receive
 					if (verbose) System.out.println("DATA" + TFTP.getBlockNumber(receivePacket) + " received.");
+					// Newline
+					if (verbose) System.out.println();
 					
 					packetInOrder = TFTP.checkPacketInOrder(receivePacket, currentBlockNumber);
 					
