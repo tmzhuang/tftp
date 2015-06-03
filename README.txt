@@ -1,24 +1,21 @@
 SYSC 3303 Group Project
 ========================
 
-(last modified README.txt May 28, 2015)
+(last modified README.txt June 2, 2015)
 
 
 Group 4, Iteration 2
 --------------------
 
 Maryn Marsland 		[PROGRAMMER]
-Yuan Sun 		[TEAM LEADER/UML DIAGRAM MAKER]
-Brandon To 		[PROGRAMMER]
-Tianming Zhuang		[TESTER]
-
-
+Yuan Sun 		[TESTER]
+Brandon To 		[TEAM LEADER/UML DIAGRAM MAKER]
+Tianming Zhuang		[PROGRAMMER]
 
 
 FILES:
 
 ============
-
 
 Source files:
 src/tftp/Client.java
@@ -39,8 +36,6 @@ lib/hamcrest-core-1.3.jar
 Other:
 TEST.txt (testing instructions and summary for this and previous iterations)
 diagrams.pdf - Class diagram, timing diagrams, and unchanged diagrams from previous iteration
-
-
 
 
 INSTRUCTIONS FOR RUNNING:
@@ -131,3 +126,5 @@ The error simulator and server DOES support multiple clients concurrently
 You can find our test plan and test files that we used in the /src/tftptest folder
 
 For changing the write access of a file, please use only the "Read-only" checkbox under the General tab of the file property. Java's standard library for checking write access is bugged, and the implementation was chosen as thus because it was desired to check the file privileges before file transfers between server and client.
+
+For any packets, if the deleyed time is longer than 6 seconds (3 tries with each of 2 seconds wait cycle), the connection should abort and the file transfer process will be terminated.
