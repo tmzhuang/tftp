@@ -40,8 +40,8 @@ public class ErrorSimulator
 	private static final int ERROR_REQUEST_LOSS						= 9;
 	
 	// Errors for MODE_DATA and MODE_ACK
-	//private static final int ERROR_PACKET_TOO_LARGE			= 1;
-	//private static final int ERROR_INVALID_OPCODE				= 2;
+//	private static final int ERROR_PACKET_TOO_LARGE1			= 1;
+//	private static final int ERROR_INVALID_OPCODE				= 2;
 	private static final int ERROR_INVALID_BLOCK_NUMBER			= 3;
 	private static final int ERROR_UNKNOWN_TID					= 4;
 	private static final int ERROR_ACK_DATA_DELAY 				= 5;
@@ -639,7 +639,7 @@ public class ErrorSimulator
 				// Sends request packet through socket
 				if (isDelayableError(modeSelected, errorSelected)) {
 					// Send current request now if duplicating
-					if (errorSelected == ERROR_REQUEST_DUPLICATE) {
+					if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_DUPLICATE) {
 						System.out.println("[ERRSIM=>SERVER]");
 						TFTP.printPacket(serverRequestPacket);
 						sendReceiveServerSocket.send(serverRequestPacket);
@@ -725,7 +725,7 @@ public class ErrorSimulator
 									!TFTP.verifyErrorPacket(forwardedDataPacket) &&
 									!packetLossTriggered &&
 									blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) { 
-							if (isDelayableError(modeSelected, errorSelected)) {
+							if (isDelayableError(modeSelected, errorSelected) && modeSelected == MODE_DATA_ACK) {
 								// Send current request now if duplicating
 								if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
 									System.out.println("[ERRSIM=>CLIENT]");
@@ -786,7 +786,7 @@ public class ErrorSimulator
 									!packetLossTriggered &&
 									!TFTP.verifyErrorPacket(forwardedAckPacket) &&
 									blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket)) { 
-							if (isDelayableError(modeSelected, errorSelected)) {
+							if (isDelayableError(modeSelected, errorSelected) && modeSelected == MODE_DATA_ACK) {
 								// Send current request now if duplicating
 								if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
 									System.out.println("[ERRSIM=>SERVER]");
@@ -878,7 +878,7 @@ public class ErrorSimulator
 
 				Thread packetDelayerThread = null;
 				// Sends request packet through socket
-				if (isDelayableError(modeSelected, errorSelected)) {
+				if (isDelayableError(modeSelected, errorSelected) && modeSelected == MODE_READ_WRITE) {
 					// Send current request now if duplicating
 					if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_DUPLICATE) {
 						System.out.println("[ERRSIM=>SERVER]");

@@ -106,7 +106,7 @@ public class Client implements Exitable {
 							r.getFileName() + " could not be transferred because of an illegal TFTP operation (client expected an ACK packet with block#: 0)");
 
 					// Sends error packet
-					TFTP.printPacket(errorPacket);
+					//TFTP.printPacket(errorPacket);
 					sendReceiveSocket.send(errorPacket);
 
 					// Echo error message
@@ -182,7 +182,7 @@ public class Client implements Exitable {
 							//otherwise re-send
 								if(verbose) System.out.println("Timed out, resending DATA" + TFTP.getBlockNumber(currentPacket));
 								sendReceiveSocket.send(currentPacket);
-								TFTP.printPacket(currentPacket);
+								//TFTP.printPacket(currentPacket);
 						}
 					}				
 					
@@ -248,7 +248,7 @@ public class Client implements Exitable {
 					nextPacket = dataPacketQueue.remove();
 				}
 				
-				if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received. addr = " + receivePacket.getAddress().toString() + ", port = " + receivePacket.getPort());
+				if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received."); //addr = " + receivePacket.getAddress().toString() + ", port = " + receivePacket.getPort());
 			} catch(Exception e) {
 				System.out.println(e.getMessage());
 			}

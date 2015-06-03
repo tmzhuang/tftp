@@ -369,7 +369,7 @@ public class Server implements Exitable {
 
 				// Form and send ACK0
 				DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, 0);
-				if (verbose) System.out.println("Sending ACK0. Address: " + ackPacket.getAddress() + "Port: " + ackPacket.getPort());
+				if (verbose) System.out.println("Sending ACK0.");
 				socket.send(ackPacket);
 
 				// Flag set when transfer is finished
