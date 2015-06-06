@@ -22,6 +22,7 @@ public class Client implements Exitable {
 	private int TID;
 	private int sendPort;
 	private String directory;
+	private String[] args;
 
 	//Maximum number of times to try re-send packet without response: 3
 	private static int RESEND_LIMIT = 3;
@@ -29,7 +30,8 @@ public class Client implements Exitable {
 	/**
 	 * Constructor for Client class, initialize a new socket upon called.
 	 */
-	public Client() {
+	public Client(String[] args) {
+		this.args = args;
 		// Create data socket for communicating with server
 		try {
 			sendReceiveSocket = new DatagramSocket();
@@ -446,7 +448,7 @@ public class Client implements Exitable {
 	 * the user for inputs for file transfer process and handle the request based on
 	 * the arguments given. 
 	 */
-	public void run(String[] args) {
+	public void run() {
 		Scanner in = new Scanner(System.in);
 		String cmd;
 		Request.Type t = null;
@@ -598,7 +600,7 @@ public class Client implements Exitable {
 	 * @param args input arguments when execute the server
 	 */
 	public static void main (String[] args) {
-		Client client = new Client();
-		client.run(args);
+		Client client = new Client(args);
+		client.run();
 	}
 }

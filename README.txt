@@ -67,35 +67,43 @@ And add the following files found in /lib/:
 
 6. To run the application:
 
-
     start the server by right clicking Server.java > Run as > Java Application
 
     start the simulator by right clicking ErrorSimulator > Run as > Java Application
 
     start the client by right clicking Client > Run as > Java Application
 
+7. If running the client throught the error simulator:
 
-7. In the server console window, enter path of the directory you would like to read from and write to on the server. (As stated in step 1, please ensure the the directory already exists beforehand.)
+    go to Run > Run Configurations...
 
-8. In the client console window, enter path of the directory you would like to read from and write to on the client. (As stated in step 1, please ensure the the directory already exists beforehand.)
+    go to the Arguments tab of the Client program
 
-9. The client will prompt you to enter one of the following operations:
+    under Program arguments: type "-t" to specify that the program should run as a test (with error simulator)
+
+8. In the server console window, enter path of the directory you would like to read from and write to on the server. (As stated in step 1, please ensure the the directory already exists beforehand.)
+
+9. In the client console window, specify the IP address or Host name of the recipient machine (either server or error simulator, depending on whether an option was speficied in step 7).
+
+10. In the client console window, enter path of the directory you would like to read from and write to on the client. (As stated in step 1, please ensure the the directory already exists beforehand.)
+
+11. The client will prompt you to enter one of the following operations:
     -read (to send a RRQ)
     -write (to send a WRQ)
     -quit (to exit the client)
 
-10. The client will prompt you to enter the FILE NAME (not FILE PATH) of the file that you wish to transfer. For read requests, the file must exist on the server-side directory specified in step 7. For write requests, the file must exist on the client-side directory specified in step 8.
+12. The client will prompt you to enter the FILE NAME (not FILE PATH) of the file that you wish to transfer. For read requests, the file must exist on the server-side directory specified in step 8. For write requests, the file must exist on the client-side directory specified in step 10.
 
 
-9. After entering the operation and file to transfer, the client, simulator, and server
+13. After entering the operation and file to transfer, the client, simulator, and server
 will work together to transfer the file.
 
-10. Once complete, the client will reprompt you to enter a new operation and file.
+14. Once complete, the client will reprompt you to enter a new operation and file.
 (In eclipse, sometimes the server and simulator output will cause the console window to change. In this case, just change it back to the client before entering a new transfer)
 
-11. To shutdown the client and server, type exit in the applicable console window and press enter.
+15. To shutdown the client and server, type exit in the applicable console window and press enter.
 
-12. To shutdown the error simulator, click on the red square representing STOP in eclipse.
+16. To shutdown the error simulator, click on the red square representing STOP in eclipse.
 
 
 
