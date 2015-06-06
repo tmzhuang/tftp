@@ -654,7 +654,7 @@ public class ErrorSimulator implements Runnable
 					packetDelayerThread.start();
 				} else if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_LOSS && !errorSimulated) {
 					// If request loss error, we don't send a packet at all
-					System.out.println("Withholding packet RRQ.");
+					System.out.println("SIMULATING LOST PACKET: RRQ.\n");
 					errorSimulated = true;
 				} else {
 					// Proceed as normal otherwise
@@ -745,7 +745,7 @@ public class ErrorSimulator implements Runnable
 								errorSimulated = true;
 							} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
 								// If request loss error, we don't send a packet at all
-								System.out.println("Withholding DATA" + blockNumberSelected + ".");
+								System.out.println("SIMULATING LOST PACKET: DATA" + blockNumberSelected + ".\n");
 								// Break current loop and wait for next data packet
 								packetLossTriggered = true;
 								continue;
@@ -809,7 +809,7 @@ public class ErrorSimulator implements Runnable
 								errorSimulated = true;
 							} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
 								// If request loss error, we don't send a packet at all
-								System.out.println("Withholding ACK" + blockNumberSelected + ".");
+								System.out.println("SIMULATING LOST PACKET: ACK" + blockNumberSelected + ".\n");
 								packetLossTriggered = true;
 								continue;
 							}
@@ -853,6 +853,10 @@ public class ErrorSimulator implements Runnable
 			catch (IOException e)
 			{
 				e.printStackTrace();
+			}
+			finally
+			{
+				System.out.println("ReadTransferHandler thread finished");
 			}
 		}
 	}
@@ -906,7 +910,7 @@ public class ErrorSimulator implements Runnable
 					packetDelayerThread.start();
 				} else if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_LOSS && !errorSimulated) {
 					// If request loss error, we don't send a packet at all
-					System.out.println("Dropping packet " + blockNumberSelected + ".");
+					System.out.println("SIMULATING LOST PACKET: " + blockNumberSelected + ".");
 					errorSimulated = true;
 				} else {
 					// Proceed as normal otherwise
@@ -1022,7 +1026,7 @@ public class ErrorSimulator implements Runnable
 								errorSimulated = true;
 							} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
 								// If request loss error, we dont send a packet at all
-								System.out.println("Withholding DATA" + blockNumberSelected + ".");
+								System.out.println("SIMULATING LOST PACKET: DATA" + blockNumberSelected + ".\n");
 								errorSimulated = true;
 								packetLossTriggered = true;
 								continue;
@@ -1081,8 +1085,8 @@ public class ErrorSimulator implements Runnable
 								packetDelayerThread.start();
 								errorSimulated = true;
 							} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS && !errorSimulated) {
-								// If request loss error, we dont send a packet at all
-								System.out.println("Withholding ACK" + blockNumberSelected + ".");
+								// If request loss error, we don't send a packet at all
+								System.out.println("SIMULATING LOST PACKET: ACK" + blockNumberSelected + ".\n");
 								// Break current loop and wait for next data packet
 								packetLossTriggered = true;
 								continue;
@@ -1202,6 +1206,10 @@ public class ErrorSimulator implements Runnable
 			{
 				e.printStackTrace();
 				return;
+			}
+			finally
+			{
+				System.out.println("WriteTransferHandler thread finished");
 			}
 		}
 	}
