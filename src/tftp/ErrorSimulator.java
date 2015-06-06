@@ -739,10 +739,10 @@ public class ErrorSimulator implements Runnable
 									sendReceiveClientSocket.send(forwardedDataPacket);
 								}
 								// Send a delayed packet
+								errorSimulated = true;
 								PacketDelayer packetDelayer = new PacketDelayer(sendReceiveClientSocket, forwardedDataPacket, packetDelay);
 								packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 								packetDelayerThread.start();
-								errorSimulated = true;
 							} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
 								// If request loss error, we don't send a packet at all
 								System.out.println("SIMULATING LOST PACKET: DATA" + blockNumberSelected + ".\n");
@@ -803,10 +803,10 @@ public class ErrorSimulator implements Runnable
 									sendReceiveServerSocket.send(forwardedAckPacket);
 								}
 								// Send a delayed packet
+								errorSimulated = true;
 								PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, forwardedAckPacket, packetDelay);
 								packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 								packetDelayerThread.start();
-								errorSimulated = true;
 							} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
 								// If request loss error, we don't send a packet at all
 								System.out.println("SIMULATING LOST PACKET: ACK" + blockNumberSelected + ".\n");
@@ -914,7 +914,6 @@ public class ErrorSimulator implements Runnable
 					errorSimulated = true;
 				} else {
 					// Proceed as normal otherwise
-					//tamperPacket(serverRequestPacket, RECEIVED_FROM_CLIENT);
 					System.out.println("[ERRSIM=>SERVER]");
 					TFTP.printPacket(serverRequestPacket);
 					sendReceiveServerSocket.send(serverRequestPacket);
@@ -1019,11 +1018,11 @@ public class ErrorSimulator implements Runnable
 									sendReceiveServerSocket.send(forwardedDataPacket);
 								}
 								// Send a delayed packet
+								errorSimulated = true;
 								PacketDelayer packetDelayer = new PacketDelayer(sendReceiveServerSocket, forwardedDataPacket, packetDelay);
 								packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 								packetDelayerThread.start();
 								System.out.println("Delaying Packet");
-								errorSimulated = true;
 							} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS) {
 								// If request loss error, we dont send a packet at all
 								System.out.println("SIMULATING LOST PACKET: DATA" + blockNumberSelected + ".\n");
@@ -1080,10 +1079,10 @@ public class ErrorSimulator implements Runnable
 									sendReceiveClientSocket.send(forwardedAckPacket);
 								}
 								// Send a delayed packet
+								errorSimulated = true;
 								PacketDelayer packetDelayer = new PacketDelayer(sendReceiveClientSocket, forwardedAckPacket, packetDelay);
 								packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 								packetDelayerThread.start();
-								errorSimulated = true;
 							} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS && !errorSimulated) {
 								// If request loss error, we don't send a packet at all
 								System.out.println("SIMULATING LOST PACKET: ACK" + blockNumberSelected + ".\n");
