@@ -15,10 +15,12 @@ public class Client implements Exitable {
 	private boolean verbose = true;
 	//private static int SEND_PORT = 68;
 	//private static int SEND_PORT = 69;
-	private static int SEND_PORT = 32001;
+	//private static int SEND_PORT = 32001;
 	//private static int SEND_PORT = 32002;
 	private InetAddress replyAddr;
+	private InetAddress sendAddr;
 	private int TID;
+	private int sendPort;
 	private String directory;
 
 	//Maximum number of times to try re-send packet without response: 3
@@ -55,7 +57,7 @@ public class Client implements Exitable {
 		// Make request packet and send
 		if (verbose) System.out.println("Sending WRITE request\n");
 		Request r = new Request(Request.Type.WRITE, filePath, mode);
-		DatagramPacket requestPacket = TFTP.formRQPacket(addr, SEND_PORT, r);
+		DatagramPacket requestPacket = TFTP.formRQPacket(addr, sendPort, r);
 		
 		sendReceiveSocket.send(requestPacket);
 
@@ -279,7 +281,7 @@ public class Client implements Exitable {
 			// Form request and send to server
 			Request r = new Request(Request.Type.READ,filePath,mode);
 			if (verbose) System.out.println("Sending a READ request to server for file \"" + r.getFileName() + "\".\n");
-			DatagramPacket requestPacket = TFTP.formRQPacket(addr, SEND_PORT, r);
+			DatagramPacket requestPacket = TFTP.formRQPacket(addr, sendPort, r);
 			DatagramPacket dataPacket;
 			// Send the request
 			sendReceiveSocket.send(requestPacket);
@@ -451,6 +453,19 @@ public class Client implements Exitable {
 		String fileName;
 		String filePath;
 		boolean badDirectory;
+
+		// Get the IP address or host name from user input
+		for (boolean validHost = false; validHost == false; ) {
+			System.out.println("Please enter the IP address of the server:");
+			String host = in.next();
+			try {
+				sendAddr = InetAddress.getByName(host);
+			} catch(UnknownHostException e) {
+				System.out.println("Invalid host name or IP address. Please try again.");
+				continue;
+			}
+			validHost = true;
+		}
 		
 		// Sets the directory for the client
 		do {
