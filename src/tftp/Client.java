@@ -13,8 +13,8 @@ import java.util.*;
 public class Client implements Exitable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
-	//private static int SEND_PORT = 68;
-	//private static int SEND_PORT = 69;
+	private static int SERVER_PORT = 69;
+	private static int ERRSIM_PORT = 68;
 	//private static int SEND_PORT = 32001;
 	//private static int SEND_PORT = 32002;
 	private InetAddress replyAddr;
@@ -446,17 +446,35 @@ public class Client implements Exitable {
 	 * the user for inputs for file transfer process and handle the request based on
 	 * the arguments given. 
 	 */
-	public void run() {
+	public void run(String[] args) {
 		Scanner in = new Scanner(System.in);
 		String cmd;
 		Request.Type t = null;
 		String fileName;
 		String filePath;
 		boolean badDirectory;
+		String mode = "";
+		String targetHost;
+		
+		if(args.length >= 1) mode = args[0];
+		// Check mode for command line args
+		switch(mode) {
+		case "-t": 
+			sendPort = ERRSIM_PORT; 
+			targetHost = "error simulator";
+			System.out.println("The client is being routed through the error simulator."); 
+			break;
+		
+		default: 
+			sendPort = SERVER_PORT; 
+			targetHost = "server";
+			break;
+		}
+		//System.out.println("The port being used is " + sendPort);
 
 		// Get the IP address or host name from user input
 		for (boolean validHost = false; validHost == false; ) {
-			System.out.println("Please enter the IP address of the server:");
+			System.out.println("Please enter the IP address of the " + targetHost + ":");
 			String host = in.next();
 			try {
 				sendAddr = InetAddress.getByName(host);
@@ -552,10 +570,10 @@ public class Client implements Exitable {
 			try {
 				switch (t) {
 					case READ:
-						this.read(InetAddress.getLocalHost(), filePath, "netascii");
+						this.read(sendAddr, filePath, "netascii");
 						break;
 					case WRITE:
-						this.write(InetAddress.getLocalHost(), filePath, "netascii");
+						this.write(sendAddr, filePath, "netascii");
 						break;
 					default:
 						System.out.println("Invalid request type. Quitting...");
@@ -581,6 +599,6 @@ public class Client implements Exitable {
 	 */
 	public static void main (String[] args) {
 		Client client = new Client();
-		client.run();
+		client.run(args);
 	}
 }

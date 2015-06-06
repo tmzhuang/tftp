@@ -18,9 +18,9 @@ public class ErrorSimulator
 	 * Fields
 	 */
 	private DatagramSocket receiveSocket;
-	//private static int RECEIVE_PORT = 68;
+	private static int RECEIVE_PORT = 68;
 	private static int SEND_PORT = 69;
-	private static int RECEIVE_PORT = 32001;
+//	private static int RECEIVE_PORT = 32001;
 	//private static int SEND_PORT = 32002;
 
 	// Mode types
@@ -63,6 +63,7 @@ public class ErrorSimulator
 	private int packetDelay;
 	private boolean sendFromUnknownTID;
 	private boolean packetTampered = false;
+	private InetAddress sendAddr;
 
 	private class PacketDelayer implements Runnable {
 		private DatagramSocket socket;
@@ -133,6 +134,19 @@ public class ErrorSimulator
 		boolean validInput;
 		
 		String modeSelectedString;
+		
+		// Get the IP address or host name from user input
+		for (boolean validHost = false; validHost == false; ) {
+			System.out.println("Please enter the IP address of the server:");
+			String host = scanner.next();
+			try {
+				sendAddr = InetAddress.getByName(host);
+			} catch(UnknownHostException e) {
+				System.out.println("Invalid host name or IP address. Please try again.");
+				continue;
+			}
+			validHost = true;
+		}
 
 		// Get mode from user input
 		do
@@ -424,22 +438,12 @@ public class ErrorSimulator
 		{
 			// Change the mode to an invalid mode
 			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for invalid mode");
-			InetAddress address = null;
-			try
-			{
-				address = InetAddress.getLocalHost();
-			}
-			catch (UnknownHostException e)
-			{
-				e.printStackTrace();
-			}
-			int port = 65535;
 			Request oldRequest = TFTP.parseRQ(packet);
 			String invalidMode = "invalidMode";
 			Request newRequest = new Request(oldRequest.getType(), oldRequest.getFileName(), invalidMode);
 			DatagramPacket newRequestPacket = TFTP.formRQPacket(
-					address,
-					port,
+					sendAddr,
+					SEND_PORT,
 					newRequest);
 			packet.setData(newRequestPacket.getData());
 		}
@@ -447,22 +451,12 @@ public class ErrorSimulator
 		{
 			// Delete the file name from the data buffer
 			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for missing file name");
-			InetAddress address = null;
-			try
-			{
-				address = InetAddress.getLocalHost();
-			}
-			catch (UnknownHostException e)
-			{
-				e.printStackTrace();
-			}
-			int port = 65535;
 			Request oldRequest = TFTP.parseRQ(packet);
 			String missingFileName = "";
 			Request newRequest = new Request(oldRequest.getType(), missingFileName, oldRequest.getMode());
 			DatagramPacket newRequestPacket = TFTP.formRQPacket(
-					address,
-					port,
+					sendAddr,
+					SEND_PORT,
 					newRequest);
 			packet.setData(newRequestPacket.getData());
 		}
@@ -637,7 +631,7 @@ public class ErrorSimulator
 
 				// Creates a DatagramPacket to send request to server
 				DatagramPacket serverRequestPacket = TFTP.formPacket(
-						InetAddress.getLocalHost(),
+						sendAddr,
 						SEND_PORT,
 						clientRequestPacket.getData());
 
@@ -891,7 +885,7 @@ public class ErrorSimulator
 				
 				// Creates a DatagramPacket to send request to server
 				DatagramPacket serverRequestPacket = TFTP.formPacket(
-						InetAddress.getLocalHost(),
+						sendAddr,
 						SEND_PORT,
 						clientRequestPacket.getData());
 
