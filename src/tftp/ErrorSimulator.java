@@ -12,7 +12,7 @@ import tftp.TFTP;
  * @author Team 4
  * @version Iteration 3
  */
-public class ErrorSimulator
+public class ErrorSimulator implements Runnable
 {
 	/**
 	 * Fields
@@ -128,262 +128,269 @@ public class ErrorSimulator
 		sendFromUnknownTID = false;
 	}
 
-	public void start() throws IOException
+	public void run()
 	{
-		// Scanner used for user input
-		Scanner scanner = new Scanner(System.in);
-
-		boolean validInput;
-		
-		String modeSelectedString;
-		
-		// Get the IP address or host name from user input
-		for (boolean validHost = false; validHost == false; ) {
-			System.out.println("Please enter the IP address of the server:");
-			String host = scanner.next();
-			try {
-				sendAddr = InetAddress.getByName(host);
-			} catch(UnknownHostException e) {
-				System.out.println("Invalid host name or IP address. Please try again.");
-				continue;
-			}
-			validHost = true;
-		}
-
-		// Get mode from user input
-		do
-		{
-			validInput = true;
-			System.out.println("Select the type of packets that you want to simulate errors for:");
-			System.out.println("	(" + MODE_NORMAL + ") - No error simulation");
-			System.out.println("	(" + MODE_READ_WRITE + ") - RRQ/WRQ packets");
-			System.out.println("	(" + MODE_DATA_ACK + ") - DATA/ACK packets");
-			modeSelectedString = scanner.next();
-			
-			try
-			{
-				modeSelected = Integer.valueOf(modeSelectedString);
-			}
-			catch (NumberFormatException e)
-			{
-				System.out.println("Please enter a value from " + MODE_NORMAL + " to " + MODE_DATA_ACK);
-				validInput = false;
-				continue;
-			}
-
-			if ((modeSelected < MODE_NORMAL) || (modeSelected > MODE_DATA_ACK))
-			{
-				System.out.println("Please enter a value from " + MODE_NORMAL + " to " + MODE_DATA_ACK);
-				validInput = false;
-			}
-		} while (!validInput);
-
-		String errorSelectedString;	
-		String causeSelectedString;
-		String blockNumberSelectedString;
-		// Get error for read/write mode 
-		if (modeSelected == MODE_READ_WRITE)
-		{
-			do
-			{
-				validInput = true;
-				System.out.println("Select the type of error you wish to simulate:");
-				System.out.println("	(" + ERROR_PACKET_TOO_LARGE + ") - Packet too large");
-				System.out.println("	(" + ERROR_INVALID_OPCODE + ") - Invalid opcode");
-				System.out.println("	(" + ERROR_INVALID_MODE + ") - Invalid mode");
-				System.out.println("	(" + ERROR_MISSING_FILE_NAME + ") - Missing file name");
-				System.out.println("	(" + ERROR_NO_TERMINATION_AFTER_FINAL_0 + ") - No termination after final 0");
-				System.out.println("	(" + ERROR_NO_FINAL_0 + ") - No final 0");
-				System.out.println("	(" + ERROR_REQUEST_DELAY + ") - Request delay");
-				System.out.println("	(" + ERROR_REQUEST_DUPLICATE + ") - Request duplicate");
-				System.out.println("	(" + ERROR_REQUEST_LOSS + ") - Request loss");
-				errorSelectedString = scanner.next();
-
-				try
-				{
-					errorSelected = Integer.valueOf(errorSelectedString);
-				}
-				catch (NumberFormatException e)
-				{
-					System.out.println("Please enter a value from " + ERROR_PACKET_TOO_LARGE + " to " + ERROR_REQUEST_LOSS);
-					validInput = false;
-					continue;
-				}
-
-				if ((errorSelected < ERROR_PACKET_TOO_LARGE) || (errorSelected > ERROR_REQUEST_LOSS))
-				{
-					System.out.println("Please enter a value from " + ERROR_PACKET_TOO_LARGE + " to " + ERROR_REQUEST_LOSS);
-					validInput = false;
-				}
-			} while (!validInput);
-
-			// If error is a network error, get the delay
-			if (isDelayableError(modeSelected, errorSelected)) {
-				do {
-					System.out.println("Please enter the amount of time in ms you would like to wait before sending"
-							+ " the delayed/duplicated request:");
-					String packetDelayString = scanner.next();
-					try
-					{
-						packetDelay = Integer.valueOf(packetDelayString);
-					}
-					catch (NumberFormatException e)
-					{
-						System.out.println("Please enter a value from " + 0 + " to " + 999999 );
-						validInput = false;
-						continue;
-					}
-
-					if ((packetDelay < 0) || (packetDelay > 999999))
-					{
-						System.out.println("Please enter a value from " + 0 + " to " + 999999 );
-						validInput = false;
-					}
-				} while (!validInput);
-			}
-		}
-		// Get error for data/ack mode
-		else if (modeSelected == MODE_DATA_ACK)
-		{
-			do
-			{
-				validInput = true;
-				System.out.println("Select the type of error you wish to simulate:");
-				System.out.println("	(" + ERROR_PACKET_TOO_LARGE + ") - Packet too large");
-				System.out.println("	(" + ERROR_INVALID_OPCODE + ") - Invalid opcode");
-				System.out.println("	(" + ERROR_INVALID_BLOCK_NUMBER + ") - Invalid block number");
-				System.out.println("	(" + ERROR_UNKNOWN_TID + ") - Unknown TID");
-				System.out.println("	(" + ERROR_ACK_DATA_DELAY + ") - ACK/DATA delay");
-				System.out.println("	(" + ERROR_ACK_DATA_DUPLICATE + ") - ACK/DATA duplicate");
-				System.out.println("	(" + ERROR_ACK_DATA_LOSS + ") - ACK/DATA loss");
-				errorSelectedString = scanner.next();
-
-				try
-				{
-					errorSelected = Integer.valueOf(errorSelectedString);
-				}
-				catch (NumberFormatException e)
-				{
-					System.out.println("Please enter a value from " + ERROR_PACKET_TOO_LARGE + " to " + ERROR_ACK_DATA_LOSS);
-					validInput = false;
-					continue;
-				}
-
-				if ((errorSelected < ERROR_PACKET_TOO_LARGE) || (errorSelected > ERROR_ACK_DATA_LOSS))
-				{
-					System.out.println("Please enter a value from " + ERROR_PACKET_TOO_LARGE + " to " + ERROR_ACK_DATA_LOSS);
-					validInput = false;
-				}
-			} while (!validInput);
-
-			do
-			{
-				validInput = true;
-				System.out.println("Select which host will cause the simulated error:");
-				System.out.println("	(" + CAUSE_CLIENT_SENT + ") - Client");
-				System.out.println("	(" + CAUSE_SERVER_SENT + ") - Server");
-				causeSelectedString = scanner.next();
-
-				try
-				{
-					causeSelected = Integer.valueOf(causeSelectedString);
-				}
-				catch (NumberFormatException e)
-				{
-					System.out.println("Please enter a value from " + CAUSE_CLIENT_SENT + " to " + CAUSE_SERVER_SENT);
-					validInput = false;
-					continue;
-				}
-
-				if ((causeSelected < CAUSE_CLIENT_SENT) || (causeSelected > CAUSE_SERVER_SENT))
-				{
-					System.out.println("Please enter a value from " + CAUSE_CLIENT_SENT + " to " + CAUSE_SERVER_SENT);
-					validInput = false;
-				}
-			} while (!validInput);
-			
-			// Get the block number to produce error on
-			do
-			{
-				validInput = true;
-				System.out.println("Enter the block number of the packet that the error will be simulated on:");
-				blockNumberSelectedString = scanner.next();
-
-				try
-				{
-					blockNumberSelected = Integer.valueOf(blockNumberSelectedString);
-				}
-				catch (NumberFormatException e)
-				{
-					System.out.println("Please enter a value from 0 to " + TFTP.MAX_BLOCK_NUMBER);
-					validInput = false;
-					continue;
-				}
-
-				if ((blockNumberSelected < 0) || (blockNumberSelected > TFTP.MAX_BLOCK_NUMBER))
-				{
-					System.out.println("Please enter a value from 0 to " + TFTP.MAX_BLOCK_NUMBER);
-					validInput = false;
-				}
-			} while (!validInput);
-
-			// If error is a network error, get the delay
-			if (isDelayableError(modeSelected, errorSelected)) {
-				do {
-					System.out.println("Please enter the amount of time in ms you would like to wait before sending"
-							+ " the delayed/duplicated packet:");
-					String packetDelayString = scanner.next();
-					try
-					{
-						packetDelay = Integer.valueOf(packetDelayString);
-					}
-					catch (NumberFormatException e)
-					{
-						System.out.println("Please enter a value from " + 0 + " to " + 999999 );
-						validInput = false;
-						continue;
-					}
-
-					if ((packetDelay < 0) || (packetDelay > 999999))
-					{
-						System.out.println("Please enter a value from " + 0 + " to " + 999999 );
-						validInput = false;
-					}
-				} while (!validInput);
-			}
-
-			
-		}
-
-		scanner.close();
-
-		System.out.println("Error simulator ready.\n");
-
 		try
 		{
-			while (true)
+			// Scanner used for user input
+			Scanner scanner = new Scanner(System.in);
+
+			boolean validInput;
+
+			String modeSelectedString;
+
+			// Get the IP address or host name from user input
+			for (boolean validHost = false; validHost == false; ) {
+				System.out.println("Please enter the IP address of the server:");
+				String host = scanner.next();
+				try {
+					sendAddr = InetAddress.getByName(host);
+				} catch(UnknownHostException e) {
+					System.out.println("Invalid host name or IP address. Please try again.");
+					continue;
+				}
+				validHost = true;
+			}
+
+			// Get mode from user input
+			do
 			{
-				// Creates a DatagramPacket to receive request from client
-				DatagramPacket clientRequestPacket = TFTP.formPacket();
+				validInput = true;
+				System.out.println("Select the type of packets that you want to simulate errors for:");
+				System.out.println("	(" + MODE_NORMAL + ") - No error simulation");
+				System.out.println("	(" + MODE_READ_WRITE + ") - RRQ/WRQ packets");
+				System.out.println("	(" + MODE_DATA_ACK + ") - DATA/ACK packets");
+				modeSelectedString = scanner.next();
 
-				// Receives response packet through socket
-				receiveSocket.receive(clientRequestPacket);
-				TFTP.shrinkData(clientRequestPacket);
-				System.out.println("[CLIENT=>ERRSIM]");
-				TFTP.printPacket(clientRequestPacket);
+				try
+				{
+					modeSelected = Integer.valueOf(modeSelectedString);
+				}
+				catch (NumberFormatException e)
+				{
+					System.out.println("Please enter a value from " + MODE_NORMAL + " to " + MODE_DATA_ACK);
+					validInput = false;
+					continue;
+				}
 
-				// Creates a thread to handle client request
-				Thread requestHandlerThread = new Thread(
-						new RequestHandler(clientRequestPacket),
-						"Request Handler Thread");
+				if ((modeSelected < MODE_NORMAL) || (modeSelected > MODE_DATA_ACK))
+				{
+					System.out.println("Please enter a value from " + MODE_NORMAL + " to " + MODE_DATA_ACK);
+					validInput = false;
+				}
+			} while (!validInput);
 
-				// Start request handler thread
-				requestHandlerThread.start();
+			String errorSelectedString;	
+			String causeSelectedString;
+			String blockNumberSelectedString;
+			// Get error for read/write mode 
+			if (modeSelected == MODE_READ_WRITE)
+			{
+				do
+				{
+					validInput = true;
+					System.out.println("Select the type of error you wish to simulate:");
+					System.out.println("	(" + ERROR_PACKET_TOO_LARGE + ") - Packet too large");
+					System.out.println("	(" + ERROR_INVALID_OPCODE + ") - Invalid opcode");
+					System.out.println("	(" + ERROR_INVALID_MODE + ") - Invalid mode");
+					System.out.println("	(" + ERROR_MISSING_FILE_NAME + ") - Missing file name");
+					System.out.println("	(" + ERROR_NO_TERMINATION_AFTER_FINAL_0 + ") - No termination after final 0");
+					System.out.println("	(" + ERROR_NO_FINAL_0 + ") - No final 0");
+					System.out.println("	(" + ERROR_REQUEST_DELAY + ") - Request delay");
+					System.out.println("	(" + ERROR_REQUEST_DUPLICATE + ") - Request duplicate");
+					System.out.println("	(" + ERROR_REQUEST_LOSS + ") - Request loss");
+					errorSelectedString = scanner.next();
+
+					try
+					{
+						errorSelected = Integer.valueOf(errorSelectedString);
+					}
+					catch (NumberFormatException e)
+					{
+						System.out.println("Please enter a value from " + ERROR_PACKET_TOO_LARGE + " to " + ERROR_REQUEST_LOSS);
+						validInput = false;
+						continue;
+					}
+
+					if ((errorSelected < ERROR_PACKET_TOO_LARGE) || (errorSelected > ERROR_REQUEST_LOSS))
+					{
+						System.out.println("Please enter a value from " + ERROR_PACKET_TOO_LARGE + " to " + ERROR_REQUEST_LOSS);
+						validInput = false;
+					}
+				} while (!validInput);
+
+				// If error is a network error, get the delay
+				if (isDelayableError(modeSelected, errorSelected)) {
+					do {
+						System.out.println("Please enter the amount of time in ms you would like to wait before sending"
+								+ " the delayed/duplicated request:");
+						String packetDelayString = scanner.next();
+						try
+						{
+							packetDelay = Integer.valueOf(packetDelayString);
+						}
+						catch (NumberFormatException e)
+						{
+							System.out.println("Please enter a value from " + 0 + " to " + 999999 );
+							validInput = false;
+							continue;
+						}
+
+						if ((packetDelay < 0) || (packetDelay > 999999))
+						{
+							System.out.println("Please enter a value from " + 0 + " to " + 999999 );
+							validInput = false;
+						}
+					} while (!validInput);
+				}
+			}
+			// Get error for data/ack mode
+			else if (modeSelected == MODE_DATA_ACK)
+			{
+				do
+				{
+					validInput = true;
+					System.out.println("Select the type of error you wish to simulate:");
+					System.out.println("	(" + ERROR_PACKET_TOO_LARGE + ") - Packet too large");
+					System.out.println("	(" + ERROR_INVALID_OPCODE + ") - Invalid opcode");
+					System.out.println("	(" + ERROR_INVALID_BLOCK_NUMBER + ") - Invalid block number");
+					System.out.println("	(" + ERROR_UNKNOWN_TID + ") - Unknown TID");
+					System.out.println("	(" + ERROR_ACK_DATA_DELAY + ") - ACK/DATA delay");
+					System.out.println("	(" + ERROR_ACK_DATA_DUPLICATE + ") - ACK/DATA duplicate");
+					System.out.println("	(" + ERROR_ACK_DATA_LOSS + ") - ACK/DATA loss");
+					errorSelectedString = scanner.next();
+
+					try
+					{
+						errorSelected = Integer.valueOf(errorSelectedString);
+					}
+					catch (NumberFormatException e)
+					{
+						System.out.println("Please enter a value from " + ERROR_PACKET_TOO_LARGE + " to " + ERROR_ACK_DATA_LOSS);
+						validInput = false;
+						continue;
+					}
+
+					if ((errorSelected < ERROR_PACKET_TOO_LARGE) || (errorSelected > ERROR_ACK_DATA_LOSS))
+					{
+						System.out.println("Please enter a value from " + ERROR_PACKET_TOO_LARGE + " to " + ERROR_ACK_DATA_LOSS);
+						validInput = false;
+					}
+				} while (!validInput);
+
+				do
+				{
+					validInput = true;
+					System.out.println("Select which host will cause the simulated error:");
+					System.out.println("	(" + CAUSE_CLIENT_SENT + ") - Client");
+					System.out.println("	(" + CAUSE_SERVER_SENT + ") - Server");
+					causeSelectedString = scanner.next();
+
+					try
+					{
+						causeSelected = Integer.valueOf(causeSelectedString);
+					}
+					catch (NumberFormatException e)
+					{
+						System.out.println("Please enter a value from " + CAUSE_CLIENT_SENT + " to " + CAUSE_SERVER_SENT);
+						validInput = false;
+						continue;
+					}
+
+					if ((causeSelected < CAUSE_CLIENT_SENT) || (causeSelected > CAUSE_SERVER_SENT))
+					{
+						System.out.println("Please enter a value from " + CAUSE_CLIENT_SENT + " to " + CAUSE_SERVER_SENT);
+						validInput = false;
+					}
+				} while (!validInput);
+
+				// Get the block number to produce error on
+				do
+				{
+					validInput = true;
+					System.out.println("Enter the block number of the packet that the error will be simulated on:");
+					blockNumberSelectedString = scanner.next();
+
+					try
+					{
+						blockNumberSelected = Integer.valueOf(blockNumberSelectedString);
+					}
+					catch (NumberFormatException e)
+					{
+						System.out.println("Please enter a value from 0 to " + TFTP.MAX_BLOCK_NUMBER);
+						validInput = false;
+						continue;
+					}
+
+					if ((blockNumberSelected < 0) || (blockNumberSelected > TFTP.MAX_BLOCK_NUMBER))
+					{
+						System.out.println("Please enter a value from 0 to " + TFTP.MAX_BLOCK_NUMBER);
+						validInput = false;
+					}
+				} while (!validInput);
+
+				// If error is a network error, get the delay
+				if (isDelayableError(modeSelected, errorSelected)) {
+					do {
+						System.out.println("Please enter the amount of time in ms you would like to wait before sending"
+								+ " the delayed/duplicated packet:");
+						String packetDelayString = scanner.next();
+						try
+						{
+							packetDelay = Integer.valueOf(packetDelayString);
+						}
+						catch (NumberFormatException e)
+						{
+							System.out.println("Please enter a value from " + 0 + " to " + 999999 );
+							validInput = false;
+							continue;
+						}
+
+						if ((packetDelay < 0) || (packetDelay > 999999))
+						{
+							System.out.println("Please enter a value from " + 0 + " to " + 999999 );
+							validInput = false;
+						}
+					} while (!validInput);
+				}
+
+
+			}
+
+			scanner.close();
+
+			System.out.println("Error simulator ready.\n");
+
+			try
+			{
+				while (true)
+				{
+					// Creates a DatagramPacket to receive request from client
+					DatagramPacket clientRequestPacket = TFTP.formPacket();
+
+					// Receives response packet through socket
+					receiveSocket.receive(clientRequestPacket);
+					TFTP.shrinkData(clientRequestPacket);
+					System.out.println("[CLIENT=>ERRSIM]");
+					TFTP.printPacket(clientRequestPacket);
+
+					// Creates a thread to handle client request
+					Thread requestHandlerThread = new Thread(
+							new RequestHandler(clientRequestPacket),
+							"Request Handler Thread");
+
+					// Start request handler thread
+					requestHandlerThread.start();
+				}
+			}
+			finally
+			{
+				receiveSocket.close();
 			}
 		}
-		finally
+		catch (IOException e)
 		{
-			receiveSocket.close();
+			e.printStackTrace();
 		}
 	}
 
@@ -548,14 +555,8 @@ public class ErrorSimulator
 	public static void main(String[] args)
 	{
 		ErrorSimulator errorSimulator = new ErrorSimulator();
-		try
-		{
-			errorSimulator.start();
-		}
-		catch (IOException e)
-		{
-			e.printStackTrace();
-		}
+		errorSimulator.run();
+
 	}
 
 	/**

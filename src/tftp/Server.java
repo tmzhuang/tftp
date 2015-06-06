@@ -10,7 +10,7 @@ import java.util.*;
  * @author Team 4
  * @version Iteration 1
  */
-public class Server implements Exitable {
+public class Server implements Exitable, Runnable {
 	private static int RECEIVE_PORT = 69;
 	//private static int RECEIVE_PORT = 32002;
 	private boolean verbose = true;

@@ -10,7 +10,7 @@ import java.util.*;
  * @author Team 4
  * @version Iteration 3
  */
-public class Client implements Exitable {
+public class Client implements Exitable, Runnable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
 	private static int SERVER_PORT = 69;

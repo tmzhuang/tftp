@@ -13,10 +13,12 @@ public class Repl implements Runnable {
 
 	public void run() {
 		//Scanner in = new Scanner(System.in);
-		String s;
+		String s = new String();
 		while (true) {
 			// Get input
-			s = in.next();
+			if (in.hasNext()) {
+				s = in.next();
+			}
 
 			// Quit server if exit command given
 			if (s.equalsIgnoreCase("exit")) {
@@ -24,7 +26,7 @@ public class Repl implements Runnable {
 				in.close();
 				prog.exit();
 				return;
-			} else {
+			} else if (!s.isEmpty()){
 				System.out.println("Invalid command. Please type \"exit\" to quit.");
 			}
 		}
