@@ -906,7 +906,7 @@ public class ErrorSimulator
 					errorSimulated = true;
 				} else if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_LOSS) {
 					// If request loss error, we don't send a packet at all
-					System.out.println("Withholding packet " + blockNumberSelected + ".");
+					System.out.println("Dropping packet " + blockNumberSelected + ".");
 					errorSimulated = true;
 				} else {
 					// Proceed as normal otherwise
