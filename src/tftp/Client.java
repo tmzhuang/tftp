@@ -450,9 +450,9 @@ public class Client implements Exitable, Runnable {
 	 */
 	public void run() {
 		Scanner in = new Scanner(System.in);
-		String cmd;
+		String cmd = new String();
 		Request.Type t = null;
-		String fileName;
+		String fileName = new String();
 		String filePath;
 		boolean badDirectory;
 		String mode = "";
@@ -511,7 +511,12 @@ public class Client implements Exitable, Runnable {
 			while(!validCmd) {
 				// Get get command
 				System.out.println("Please enter a command (read/write/exit):");
-				cmd = in.next();
+				// Keep scanning for user input until something has been entered
+				do{
+					if (in.hasNext()) {
+						cmd = in.next();
+					}
+				}while (cmd.length() == 0);
 				// Quit server if exit command given
 				if (cmd.equalsIgnoreCase("exit")) {
 					in.close();
@@ -523,7 +528,7 @@ public class Client implements Exitable, Runnable {
 				} else if (cmd.equalsIgnoreCase("write")) {
 					validCmd = true;
 					t = Request.Type.WRITE;
-				} else {
+				} else if (!cmd.isEmpty()){
 					validCmd = false;
 					System.out.println("Invalid command. Valid commands are read, write, and exit.");
 				}
@@ -532,7 +537,9 @@ public class Client implements Exitable, Runnable {
 			// Get file name
 			do {
 				System.out.println("Please enter the name of the file to transfer:");
-				fileName = in.next();
+				if (in.hasNext()) {
+					fileName = in.next();
+				}
 				if (!TFTP.isPathless(fileName))
 				{
 					System.out.println("File names must not contain a path. The directory that you designated for transfer is: " + directory);
@@ -561,6 +568,7 @@ public class Client implements Exitable, Runnable {
 				if (TFTP.fileExists(filePath) && !TFTP.isDirectory(filePath)) {
 					// Echo error message
 					System.out.println("File already exists.\n");
+					in.reset();
 					continue;
 				} else {
 					// Prints empty line
