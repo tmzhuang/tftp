@@ -1,6 +1,7 @@
 package tftp;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.*;
 import java.util.*;
 
@@ -567,6 +568,18 @@ public class Client implements Exitable, Runnable {
 					System.out.println("");
 				}
 			}
+			
+			System.out.println("Clearing socket receive buffer...");
+			DatagramPacket throwAwayPacket = TFTP.formPacket();
+			do {
+				try {
+					sendReceiveSocket.receive(throwAwayPacket);
+				} catch (SocketTimeoutException e) {
+					break;
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			} while (true);
 
 			// Send the request
 			try {
