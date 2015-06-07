@@ -84,7 +84,7 @@ public class Client implements Exitable, Runnable {
 							return;
 						}
 						//otherwise re-send
-						if(verbose) System.out.println("Timed out, resending write request.");
+						if(verbose) System.out.println("\nTIMED OUT, RESENDING WRITE REQUEST.\n");
 						sendReceiveSocket.send(requestPacket);
 					}
 				}
@@ -185,7 +185,7 @@ public class Client implements Exitable, Runnable {
 								return;
 							}
 							//otherwise re-send
-								if(verbose) System.out.println("Timed out, resending DATA" + TFTP.getBlockNumber(currentPacket));
+								if(verbose) System.out.println("\nTIMED OUT, RESENDING DATA" + TFTP.getBlockNumber(currentPacket));
 								sendReceiveSocket.send(currentPacket);
 								//TFTP.printPacket(currentPacket);
 						}
@@ -319,9 +319,12 @@ public class Client implements Exitable, Runnable {
 							System.out.println("No response from server after " + RESEND_LIMIT + " attempts. Try again later.");
 							return;
 						}
-						//don't re-send ACK packets
-						//	if(verbose) System.out.println("Timed out, resending ACK" + + TFTP.getBlockNumber(previousPacket));
-						//	sendReceiveSocket.send(previousPacket);
+						//don't re-send ACK packets, but do re-send request
+						if(firstIteration)
+						{
+							if(verbose) System.out.println("\nTIMED OUT, RESENDING READ REQUEST.\n");
+							sendReceiveSocket.send(requestPacket);
+						}
 					}
 				}
 				

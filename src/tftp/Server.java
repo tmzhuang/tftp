@@ -249,7 +249,7 @@ public class Server implements Exitable, Runnable {
 										return;
 									}
 									//otherwise re-send
-										System.out.println("Timed out, resending DATA" + TFTP.getBlockNumber(currentPacket));
+										System.out.println("\nTIMED OUT, RESENDING DATA" + TFTP.getBlockNumber(currentPacket));
 										socket.send(currentPacket);
 								}
 							}
