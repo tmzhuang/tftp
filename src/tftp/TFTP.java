@@ -249,7 +249,8 @@ public class TFTP {
 
 	public static int getModeIndex(DatagramPacket packet)
 	{
-		if (verifyRequestPacket(packet)) {
+		String[] errorMessage = new String[1];
+		if (verifyRequestPacket(packet, errorMessage)) {
 			int zeroCount = 0;
 			int position = 0;
 			while(zeroCount != 2 && position < packet.getLength()) {
@@ -521,7 +522,7 @@ public class TFTP {
 	}
 
 	// Returns true if request packet matches TFTP specifications
-	public static boolean verifyRequestPacket(DatagramPacket packet)
+	public static boolean verifyRequestPacket(DatagramPacket packet, String[] errorMessage)
 	{
 		// Stores the data that we are checking against
 		byte data[] = packet.getData();
@@ -533,6 +534,7 @@ public class TFTP {
 			// Check if first byte is 0
 			if (data[offset.getOffset()] != 0)
 			{
+				errorMessage[0] = "First byte is not 0";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -540,6 +542,7 @@ public class TFTP {
 			// Check if next byte is READ_OP_CODE or WRITE_OP_CODE
 			if (data[offset.getOffset()] != READ_OP_CODE && data[offset.getOffset()] != WRITE_OP_CODE)
 			{
+				errorMessage[0] = "Invalid opcode";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -557,12 +560,14 @@ public class TFTP {
 			// Immediately return false if the length of the fileName is 0
 			if (fileNameLength == 0)
 			{
+				errorMessage[0] = "Missing file name";
 				return false;
 			}
 
 			// Check if next byte is 0
 			if (data[offset.getOffset()] != 0)
 			{
+				errorMessage[0] = "Missing 0 byte separating file name and mode";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -580,6 +585,7 @@ public class TFTP {
 			// Immediately return false if the length of the mode is not the correct length
 			if ((modeLength != MODE_NETASCII.length()) && (modeLength != MODE_OCTET.length()))
 			{
+				errorMessage[0] = "Invalid mode";
 				return false;
 			}
 
@@ -592,12 +598,14 @@ public class TFTP {
 			String modeLower = mode.toLowerCase();
 			if (!modeLower.equals(MODE_NETASCII) && !modeLower.equals(MODE_OCTET))
 			{
+				errorMessage[0] = "Invalid mode";
 				return false;
 			}
 
 			// Check if next byte is 0
 			if (data[offset.getOffset()] != 0)
 			{
+				errorMessage[0] = "Missing final 0 byte";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -605,6 +613,7 @@ public class TFTP {
 			// Check if the final position of the offset is at the last data byte
 			if (offset.getOffset() != dataLength)
 			{
+				errorMessage[0] = "No termination after final 0 byte";
 				return false;
 			}
 
@@ -612,12 +621,13 @@ public class TFTP {
 		}
 		catch (IndexOutOfBoundsException e)
 		{
+			errorMessage[0] = "Something is wrong with the packet";
 			return false;
 		}
 	}
 
 	// Returns true if data packet matches TFTP specifications
-	public static boolean verifyDataPacket(DatagramPacket packet, int blockNumber)
+	public static boolean verifyDataPacket(DatagramPacket packet, int blockNumber, String[] errorMessage)
 	{
 		assert((blockNumber >= 0) && (blockNumber <= MAX_BLOCK_NUMBER));
 
@@ -631,12 +641,14 @@ public class TFTP {
 			// Check if the data packet is a valid size
 			if (dataLength > MAX_PACKET_SIZE)
 			{
+				errorMessage[0] = "Packet too large";
 				return false;
 			}
 
 			// Check if first byte is 0
 			if (data[offset.getOffset()] != 0)
 			{
+				errorMessage[0] = "First byte is not 0";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -644,6 +656,7 @@ public class TFTP {
 			// Check if next byte is OPCODE_DATA
 			if (data[offset.getOffset()] != DATA_OP_CODE)
 			{
+				errorMessage[0] = "Invalid opcode";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -661,6 +674,7 @@ public class TFTP {
 			// Check if block number is larger than the currently 
 			if (parsedBlockNumber > blockNumber)
 			{
+				errorMessage[0] = "Invalid block number";
 				return false;
 			}
 
@@ -668,12 +682,13 @@ public class TFTP {
 		}
 		catch (IndexOutOfBoundsException e)
 		{
+			errorMessage[0] = "Something is wrong with the packet";
 			return false;
 		}
 	}
 
 	// Returns true if acknowledgement packet matches TFTP specifications
-	public static boolean verifyAckPacket(DatagramPacket packet, int blockNumber)
+	public static boolean verifyAckPacket(DatagramPacket packet, int blockNumber, String[] errorMessage)
 	{
 		assert((blockNumber >= 0) && (blockNumber <= MAX_BLOCK_NUMBER));
 
@@ -687,12 +702,21 @@ public class TFTP {
 			// Check if the ack packet is a valid size
 			if (dataLength != 4)
 			{
+				if (dataLength > 4)
+				{
+					errorMessage[0] = "Packet too large";
+				}
+				else
+				{
+					errorMessage[0] = "Packet too small";
+				}
 				return false;
 			}
 
 			// Check if first byte is 0
 			if (data[offset.getOffset()] != 0)
 			{
+				errorMessage[0] = "First byte is not 0";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -700,6 +724,7 @@ public class TFTP {
 			// Check if next byte is OPCODE_ACK
 			if (data[offset.getOffset()] != ACK_OP_CODE)
 			{
+				errorMessage[0] = "Invalid opcode";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -717,6 +742,7 @@ public class TFTP {
 			// Check if block number is greater than the number currently being sent (if smaller it is dealt with as a delay)
 			if (parsedBlockNumber > blockNumber)
 			{
+				errorMessage[0] = "Invalid block number";
 				return false;
 			}
 
@@ -724,12 +750,13 @@ public class TFTP {
 		}
 		catch (IndexOutOfBoundsException e)
 		{
+			errorMessage[0] = "Something is wrong with the packet";
 			return false;
 		}
 	}
 
 	// Returns true if error packet matches TFTP specifications
-	public static boolean verifyErrorPacket(DatagramPacket packet)
+	public static boolean verifyErrorPacket(DatagramPacket packet, String[] errorMessage)
 	{
 		// Stores the data that we are checking against
 		byte data[] = packet.getData();
@@ -741,6 +768,7 @@ public class TFTP {
 			// Check if first byte is 0
 			if (data[offset.getOffset()] != 0)
 			{
+				errorMessage[0] = "First byte is not 0";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -748,6 +776,7 @@ public class TFTP {
 			// Check if next byte is OPCODE_ERROR
 			if (data[offset.getOffset()] != ERROR_OP_CODE)
 			{
+				errorMessage[0] = "Invalid opcode";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -755,6 +784,7 @@ public class TFTP {
 			// Check if next byte is 0
 			if (data[offset.getOffset()] != 0)
 			{
+				errorMessage[0] = "Missing byte separating op code and error code";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -763,6 +793,7 @@ public class TFTP {
 			if ((data[offset.getOffset()] < ERROR_CODE_NOT_DEFINED) ||
 				(data[offset.getOffset()] > ERROR_CODE_NO_SUCH_USER))
 			{
+				errorMessage[0] = "Invalid error code";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -776,6 +807,7 @@ public class TFTP {
 			// Check if last byte is 0
 			if (data[offset.getOffset()] != 0)
 			{
+				errorMessage[0] = "Missing final 0 byte";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -783,6 +815,7 @@ public class TFTP {
 			// Check if the final position of the offset is at the last data byte
 			if (offset.getOffset() != dataLength)
 			{
+				errorMessage[0] = "No termination after final 0 byte";
 				return false;
 			}
 
@@ -790,6 +823,7 @@ public class TFTP {
 		}
 		catch (IndexOutOfBoundsException e)
 		{
+			errorMessage[0] = "Something is wrong with the packet";
 			return false;
 		}
 	}

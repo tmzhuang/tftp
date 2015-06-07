@@ -95,13 +95,14 @@ public class Server implements Exitable, Runnable {
 		 * method based on the OP code of the packet.
 		 */
 		public void run() {
-			if (!TFTP.verifyRequestPacket(initialPacket))
+			String[] errorMessage = new String[1];
+			if (!TFTP.verifyRequestPacket(initialPacket, errorMessage))
 			{
 				DatagramPacket errorPacket = TFTP.formERRORPacket(
 						replyAddr,
 						TID,
 						TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
-						"Request packet malformed");
+						errorMessage[0]);
 						
 				try {
 					socket.send(errorPacket);
@@ -281,9 +282,10 @@ public class Server implements Exitable, Runnable {
 						} while (unexpectedPacket);
 
 						// This block is entered if the packet received is not a valid ACK packet
-						if (!TFTP.verifyAckPacket(receivePacket, currentBlockNumber)) {
+						String[] errorMessage = new String[1];
+						if (!TFTP.verifyAckPacket(receivePacket, currentBlockNumber, errorMessage)) {
 							// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
-							if (TFTP.verifyErrorPacket(receivePacket)) {
+							if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
 								System.out.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 
 								// Closes socket and aborts thread
@@ -298,7 +300,7 @@ public class Server implements Exitable, Runnable {
 										replyAddr,
 										TID,
 										TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
-										fileName + " could not be transferred because of an illegal TFTP operation (server expected a ACK packet with block#: " + currentBlockNumber + ")");
+										fileName + " could not be transferred because of the following error: " + errorMessage[0] + " (server expected a ACK packet with block#: " + currentBlockNumber + ")");
 
 								// Sends error packet
 								socket.send(errorPacket);
@@ -420,10 +422,11 @@ public class Server implements Exitable, Runnable {
 					}
 
 					// This block is entered if the packet received is not a valid DATA packet
-					if (!TFTP.verifyDataPacket(receivePacket, currentBlockNumber)) {
+					String[] errorMessage = new String[1];
+					if (!TFTP.verifyDataPacket(receivePacket, currentBlockNumber, errorMessage)) {
 						// If an ERROR packet is received instead of the expected DATA packet, delete the file
 						// and abort the transfer
-						if (TFTP.verifyErrorPacket(receivePacket)) {
+						if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
 							System.out.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 							return;
 						}
@@ -435,7 +438,7 @@ public class Server implements Exitable, Runnable {
 									replyAddr,
 									TID,
 									TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
-									fileName + " could not be transferred because of an illegal TFTP operation (server expected a DATA packet with block#: " + currentBlockNumber + ")");
+									fileName + " could not be transferred because of the following error: " + errorMessage[0] + " (server expected a DATA packet with block#: " + currentBlockNumber + ")");
 
 							// Sends error packet
 							socket.send(errorPacket);

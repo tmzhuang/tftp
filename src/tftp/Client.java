@@ -16,8 +16,8 @@ public class Client implements Exitable, Runnable {
 	private boolean verbose = true;
 	private static int SERVER_PORT = 69;
 	private static int ERRSIM_PORT = 68;
-	//private static int SEND_PORT = 32001;
-	//private static int SEND_PORT = 32002;
+	//private static int SERVER_PORT = 32002;
+	//private static int ERRSIM_PORT = 32001;
 	private InetAddress replyAddr;
 	private InetAddress sendAddr;
 	private int TID;
@@ -94,9 +94,10 @@ public class Client implements Exitable, Runnable {
 			this.TID = receivePacket.getPort();
 
 			// This block is entered if the packet received is not a valid ACK packet
-			if (!TFTP.verifyAckPacket(receivePacket, 0)) {
+			String[] errorMessage = new String[1];
+			if (!TFTP.verifyAckPacket(receivePacket, 0, errorMessage)) {
 				// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
-				if (TFTP.verifyErrorPacket(receivePacket)) {
+				if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
 					System.out.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 					return;
 				}
@@ -108,7 +109,7 @@ public class Client implements Exitable, Runnable {
 							replyAddr,
 							TID,
 							TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
-							r.getFileName() + " could not be transferred because of an illegal TFTP operation (client expected an ACK packet with block#: 0)");
+							r.getFileName() + " could not be transferred because of the following error: " + errorMessage[0] + " (client expected a ACK packet with block#: 0)");
 
 					// Sends error packet
 					//TFTP.printPacket(errorPacket);
@@ -215,10 +216,11 @@ public class Client implements Exitable, Runnable {
 				} while (unexpectedPacket);
 
 				// This block is entered if the packet received is not a valid ACK packet
-				if (!TFTP.verifyAckPacket(receivePacket, currentBlockNumber))
+				String[] errorMessage = new String[1];
+				if (!TFTP.verifyAckPacket(receivePacket, currentBlockNumber, errorMessage))
 				{
 					// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
-					if (TFTP.verifyErrorPacket(receivePacket))
+					if (TFTP.verifyErrorPacket(receivePacket, errorMessage))
 					{
 						System.out.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 						return;
@@ -232,7 +234,7 @@ public class Client implements Exitable, Runnable {
 								replyAddr,
 								TID,
 								TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
-								r.getFileName() + " could not be transferred because of an illegal TFTP operation (client expected an ACK packet with block#: " + currentBlockNumber + ")");
+								r.getFileName() + " could not be transferred because of the following error: " + errorMessage[0] + " (client expected a ACK packet with block#: " + currentBlockNumber + ")");
 
 						// Sends error packet
 						//TFTP.printPacket(errorPacket);
@@ -356,10 +358,11 @@ public class Client implements Exitable, Runnable {
 				}
 
 				// This block is entered if the packet received is not a valid DATA packet
-				if (!TFTP.verifyDataPacket(dataPacket, currentBlockNumber)) {
+				String[] errorMessage = new String[1];
+				if (!TFTP.verifyDataPacket(dataPacket, currentBlockNumber, errorMessage)) {
 					// If an ERROR packet is received instead of the expected DATA packet, delete the file
 					// and abort the transfer
-					if (TFTP.verifyErrorPacket(dataPacket)) {
+					if (TFTP.verifyErrorPacket(dataPacket, errorMessage)) {
 						System.out.println("ERROR CODE " + TFTP.getErrorCode(dataPacket) + ": " + TFTP.getErrorMessage(dataPacket) + ". Aborting transfer...\n");
 						return;
 					}
@@ -371,7 +374,7 @@ public class Client implements Exitable, Runnable {
 								replyAddr,
 								TID,
 								TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
-								r.getFileName() + " could not be transferred because of an illegal TFTP operation (client expected a DATA packet with block#: " + currentBlockNumber + ")");
+								r.getFileName() + " could not be transferred because of the following error: " + errorMessage[0] + " (client expected a DATA packet with block#: " + currentBlockNumber + ")");
 
 						// Sends error packet
 						//TFTP.printPacket(errorPacket);

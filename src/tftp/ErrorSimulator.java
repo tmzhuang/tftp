@@ -20,8 +20,8 @@ public class ErrorSimulator implements Runnable
 	private DatagramSocket receiveSocket;
 	private static int RECEIVE_PORT = 68;
 	private static int SEND_PORT = 69;
-//	private static int RECEIVE_PORT = 32001;
-//	private static int SEND_PORT = 32002;
+	//private static int RECEIVE_PORT = 32001;
+	//private static int SEND_PORT = 32002;
 
 	// Mode types
 	private static final int MODE_NORMAL		= 1;
@@ -574,8 +574,10 @@ public class ErrorSimulator implements Runnable
 		public void run()
 		{
 			// Returns if request packet is malformed
-			if (!TFTP.verifyRequestPacket(requestPacket))
+			String[] errorMessage = new String[1];
+			if (!TFTP.verifyRequestPacket(requestPacket, errorMessage))
 			{
+				System.out.println("ERROR CODE 4: " + errorMessage[0]);
 				return;
 			}
 
@@ -680,6 +682,8 @@ public class ErrorSimulator implements Runnable
 				// Flag indicating first loop iteration (for setting up TID)
 				boolean firstIteration = true;
 
+				String[] errorMessage = new String[1];
+
 				try
 				{
 					boolean packetLossTriggered = false;
@@ -728,7 +732,7 @@ public class ErrorSimulator implements Runnable
 						// 3. Error simulator is simulating a network error
 						tamperPacket(forwardedDataPacket, RECEIVED_FROM_SERVER);
 						if (!errorSimulated && causeSelected == RECEIVED_FROM_SERVER &&
-									!TFTP.verifyErrorPacket(forwardedDataPacket) &&
+									!TFTP.verifyErrorPacket(forwardedDataPacket, errorMessage) &&
 									!packetLossTriggered &&
 									blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) { 
 							if (isDelayableError(modeSelected, errorSelected) && modeSelected == MODE_DATA_ACK) {
@@ -792,7 +796,7 @@ public class ErrorSimulator implements Runnable
 						//System.out.println("isDelayble" + isDelayableError(modeSelected, errorSelected));
 						if (!errorSimulated && causeSelected == RECEIVED_FROM_CLIENT &&
 									!packetLossTriggered &&
-									!TFTP.verifyErrorPacket(forwardedAckPacket) &&
+									!TFTP.verifyErrorPacket(forwardedAckPacket, errorMessage) &&
 									blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket)) { 
 							System.out.println("Simulating Network Error.");
 							if (isDelayableError(modeSelected, errorSelected) && modeSelected == MODE_DATA_ACK) {
@@ -887,6 +891,8 @@ public class ErrorSimulator implements Runnable
 
 				// Flag set when error packet is received
 				boolean errorPacketReceived = false;
+
+				String[] errorMessage = new String[1];
 				
 				// Creates a DatagramPacket to send request to server
 				DatagramPacket serverRequestPacket = TFTP.formPacket(
@@ -1010,7 +1016,7 @@ public class ErrorSimulator implements Runnable
 						//System.out.println("blockNumberSelected = 1:" + (blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket)));
 						//System.out.println("isDelayble" + isDelayableError(modeSelected, errorSelected));
 						if (!errorSimulated && causeSelected == RECEIVED_FROM_CLIENT &&
-									!TFTP.verifyErrorPacket(forwardedDataPacket) &&
+									!TFTP.verifyErrorPacket(forwardedDataPacket, errorMessage) &&
 									!packetLossTriggered &&
 									blockNumberSelected == TFTP.getBlockNumber(forwardedDataPacket)) { 
 							if (isDelayableError(modeSelected, errorSelected) && modeSelected == MODE_DATA_ACK) {
@@ -1071,7 +1077,7 @@ public class ErrorSimulator implements Runnable
 						// 3. Error simulator is simulating a network error
 						tamperPacket(forwardedAckPacket, RECEIVED_FROM_SERVER);
 						if (!errorSimulated && causeSelected == RECEIVED_FROM_SERVER &&
-									!TFTP.verifyErrorPacket(forwardedAckPacket) &&
+									!TFTP.verifyErrorPacket(forwardedAckPacket, errorMessage) &&
 									!packetLossTriggered &&
 									blockNumberSelected == TFTP.getBlockNumber(forwardedAckPacket)) {
 							if (isDelayableError(modeSelected, errorSelected)) {
@@ -1173,6 +1179,8 @@ public class ErrorSimulator implements Runnable
 				
 				boolean unexpectedPacket;
 				
+				String[] errorMessage = new String[1];
+				
 				// Continue to receive packets until the correct packet is received
 				do
 				{
@@ -1192,7 +1200,7 @@ public class ErrorSimulator implements Runnable
 					{
 						unexpectedPacket = true;
 					}
-					else if (!TFTP.verifyErrorPacket(errorPacket))
+					else if (!TFTP.verifyErrorPacket(errorPacket, errorMessage))
 					{
 						unexpectedPacket = true;
 					}
