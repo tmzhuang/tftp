@@ -18,10 +18,10 @@ public class ErrorSimulator implements Runnable
 	 * Fields
 	 */
 	private DatagramSocket receiveSocket;
-	//private static int RECEIVE_PORT = 68;
-	//private static int SEND_PORT = 69;
-	private static int RECEIVE_PORT = 32001;
-	private static int SEND_PORT = 32002;
+	private static int RECEIVE_PORT = 68;
+	private static int SEND_PORT = 69;
+	//private static int RECEIVE_PORT = 32001;
+	//private static int SEND_PORT = 32002;
 
 	// Mode types
 	private static final int MODE_NORMAL		= 1;
