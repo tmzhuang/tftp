@@ -44,6 +44,7 @@ public class TFTP {
 	public static final int MAX_BLOCK_NUMBER = 65535;
 	public static final String MODE_NETASCII = "netascii";
 	public static final String MODE_OCTET = "octet";
+	public static int VERBOSITY = 1;
 
 	/**
 	 * Forms a DatagramPacket with an empty data buffer large enough to hold the maximum
@@ -1029,30 +1030,64 @@ public class TFTP {
 
 	public static void printPacket(DatagramPacket packet) {
 		int operation = getOpCode(packet);
-		System.out.println("===== Packet Info =====");
-		System.out.println("Port = " + packet.getPort());
-		try { System.out.println("Type = " + opCodeToString(operation)); }
-		catch (UnsupportedOperationException e) { System.out.println("Type = Unknown"); }
-		switch(operation) {
-			case READ_OP_CODE:
-			case WRITE_OP_CODE:
-				try { System.out.println("File name = " + parseRQ(packet).getFileName()); }
-				catch (IllegalArgumentException e) { System.out.println("File name = Unknown"); }
-				try { System.out.println("Mode = " + parseRQ(packet).getMode()); }
-				catch (IllegalArgumentException e) { System.out.println("Mode = Unknown"); }
-				break;
-			case DATA_OP_CODE:
-			case ACK_OP_CODE:
-				System.out.println("Block # = " + getBlockNumber(packet));
-				break;
-			case ERROR_OP_CODE:
-				System.out.println("Error message = " + getErrorMessage(packet));
-				break;
-			default:
-				//throw new UnsupportedOperationException();
-				break;
+		if (VERBOSITY == 1)
+		{
+			switch(operation)
+			{
+				case READ_OP_CODE:
+				case WRITE_OP_CODE:
+					try { System.out.println(opCodeToString(operation) + " Request packet for file: " + parseRQ(packet).getFileName() + "\n"); }
+					catch (ArrayIndexOutOfBoundsException e) { System.out.println("Unknown Read/Write request packet received\n"); }
+					break;
+				case DATA_OP_CODE:
+				case ACK_OP_CODE:
+					try { System.out.println(opCodeToString(operation) + " packet for block#: " + getBlockNumber(packet) + "\n"); }
+					catch (ArrayIndexOutOfBoundsException e) { System.out.println("Unknown DATA/ACK packet received\n"); }
+					break;
+				case ERROR_OP_CODE:
+					try { System.out.println(opCodeToString(operation) + " packet with message: " + getErrorMessage(packet) + "\n"); }
+					catch (ArrayIndexOutOfBoundsException e) { System.out.println("Unknown ERROR packet received\n"); }
+					break;
+				default:
+					//throw new UnsupportedOperationException();
+					break;
+			}
+			return;
 		}
-		System.out.println("Data = " + Arrays.toString(packet.getData()) + "\n");
+		if (VERBOSITY >= 2)
+		{
+			System.out.println("===== Packet Info =====");
+			System.out.println("Port = " + packet.getPort());
+			try { System.out.println("Type = " + opCodeToString(operation)); }
+			catch (UnsupportedOperationException e) { System.out.println("Type = Unknown"); }
+			switch(operation)
+			{
+				case READ_OP_CODE:
+				case WRITE_OP_CODE:
+					try { System.out.println("File name = " + parseRQ(packet).getFileName()); }
+					catch (ArrayIndexOutOfBoundsException e) { System.out.println("File name = Unknown"); }
+					try { System.out.println("Mode = " + parseRQ(packet).getMode()); }
+					catch (ArrayIndexOutOfBoundsException e) { System.out.println("Mode = Unknown"); }
+					break;
+				case DATA_OP_CODE:
+				case ACK_OP_CODE:
+					System.out.println("Block # = " + getBlockNumber(packet));
+					break;
+				case ERROR_OP_CODE:
+					try { System.out.println("Error message = " + getErrorMessage(packet)); }
+					catch (ArrayIndexOutOfBoundsException e) { System.out.println("Error message = Unknown"); }
+					break;
+				default:
+					//throw new UnsupportedOperationException();
+					break;
+			}
+		}
+		if (VERBOSITY >= 3)
+		{
+			//System.out.println("String = " + packet.getData().toString());
+			System.out.println("Data = " + Arrays.toString(packet.getData()));
+		}
+		System.out.println("");
 	}
 
 	// Converts the OPCODE to it's string representation
