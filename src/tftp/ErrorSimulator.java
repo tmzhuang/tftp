@@ -631,6 +631,7 @@ public class ErrorSimulator implements Runnable
 
 				// Socket used for sending and receiving packets from client
 				DatagramSocket sendReceiveClientSocket = new DatagramSocket();
+				sendReceiveClientSocket.setSoTimeout(1);
 
 				// Creates a DatagramPacket to send request to server
 				DatagramPacket serverRequestPacket = TFTP.formPacket(
@@ -681,8 +682,13 @@ public class ErrorSimulator implements Runnable
 
 				// Flag indicating first loop iteration (for setting up TID)
 				boolean firstIteration = true;
+				
+				// Flag to wait for the receipt of a packet
+				boolean packetReceived;
+				boolean packetFromClient;
 
 				String[] errorMessage = new String[1];
+				sendReceiveServerSocket.setSoTimeout(1);
 
 				try
 				{
@@ -691,40 +697,62 @@ public class ErrorSimulator implements Runnable
 					while (!transferComplete)
 					{
 						// Creates a DatagramPacket to receive data packet from server
-						DatagramPacket dataPacket = TFTP.formPacket();
+						DatagramPacket receivedPacket = TFTP.formPacket();
 
-						// Receives data packet from server
-						System.out.println("Waiting on DATA packet from server.");
-						sendReceiveServerSocket.receive(dataPacket);
 						
-						// Transfer is complete if server sends back an error packet (other than error 5)
-						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE)
+						// Receives packet from client or server
+						System.out.println("Waiting for packet...");
+						
+						packetReceived = false;
+						packetFromClient = false;
+						
+						while(!packetReceived)
 						{
-							if(!(TFTP.getErrorCode(dataPacket)==TFTP.ERROR_CODE_UNKNOWN_TID))
+							try {
+								sendReceiveClientSocket.receive(receivedPacket);
+								packetReceived = true;
+								packetFromClient = true;
+							}
+							catch(SocketTimeoutException e) {
+								try{
+									sendReceiveServerSocket.receive(receivedPacket);
+									packetReceived = true;
+								}
+								catch(SocketTimeoutException ex)	{}
+								}
+							}
+						
+					//If received packet is from server (DATA or ERROR)
+					if(!packetFromClient)
+					{
+						// Transfer is complete if server sends back an error packet (other than error 5)
+						if (TFTP.getOpCode(receivedPacket) == TFTP.ERROR_OP_CODE)
+						{
+							if(!(TFTP.getErrorCode(receivedPacket)==TFTP.ERROR_CODE_UNKNOWN_TID))
 								errorPacketReceived = true;
 						}
 
 						// Transfer is complete if data block is less than MAX_DATA_SIZE
-						if (dataPacket.getLength() < TFTP.MAX_DATA_SIZE)
+						if (receivedPacket.getLength() < TFTP.MAX_DATA_SIZE)
 						{
-							transferComplete = true;
+							//transferComplete = true;
 						}
-						TFTP.shrinkData(dataPacket);
+						TFTP.shrinkData(receivedPacket);
 						System.out.println("[SERVER=>ERRSIM]");
-						TFTP.printPacket(dataPacket);
+						TFTP.printPacket(receivedPacket);
 
 						// Saves server TID on first iteration
 						if (firstIteration)
 						{
-							serverAddressTID = dataPacket.getAddress();
-							serverPortTID = dataPacket.getPort();
+							serverAddressTID = receivedPacket.getAddress();
+							serverPortTID = receivedPacket.getPort();
 							firstIteration = false;
 						}
 
 						DatagramPacket forwardedDataPacket = TFTP.formPacket(
 								clientAddressTID,
 								clientPortTID,
-								dataPacket.getData());
+								receivedPacket.getData());
 
 						// Simulate network error if all of the following apply
 						// 1. Cause is server
@@ -763,27 +791,28 @@ public class ErrorSimulator implements Runnable
 							sendReceiveClientSocket.send(forwardedDataPacket);
 						}
 						
-						// End transfer if last packet received was an error packet
+						// End transfer if last packet received was an error packet other than error code 5
 						if (errorPacketReceived) {
-							transferComplete = true;
-							break;
+							if(TFTP.getErrorCode(receivedPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID)
+							{
+								transferComplete = true;
+								break;
+							}
 						}
-
-						// Creates a DatagramPacket to receive acknowledgment packet from client
-						DatagramPacket ackPacket = TFTP.formPacket();
-
-						// Receives acknowledgment packet from client
+						
 						System.out.println("Waiting on ACK from client.");
-						sendReceiveClientSocket.receive(ackPacket);
-						TFTP.shrinkData(ackPacket);
+					}
+					//packet received is an ACK packet
+					else {
+						TFTP.shrinkData(receivedPacket);
 						System.out.println("[CLIENT=>ERRSIM]");
-						TFTP.printPacket(ackPacket);
+						TFTP.printPacket(receivedPacket);
 
 						// Sends acknowledgment packet to server
 						DatagramPacket forwardedAckPacket = TFTP.formPacket(
 								serverAddressTID,
 								serverPortTID,
-								ackPacket.getData());
+								receivedPacket.getData());
 
 						tamperPacket(forwardedAckPacket, RECEIVED_FROM_CLIENT);
 						
@@ -826,9 +855,9 @@ public class ErrorSimulator implements Runnable
 						}
 
 						// Transfer is complete if client sends back an error packet other than error 5
-						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE)
+						if (TFTP.getOpCode(receivedPacket) == TFTP.ERROR_OP_CODE)
 						{
-							if(TFTP.getErrorCode(ackPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID)
+							if(TFTP.getErrorCode(receivedPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID)
 									{
 										errorPacketReceived = true;
 										transferComplete = true;
@@ -844,6 +873,8 @@ public class ErrorSimulator implements Runnable
 							} catch(InterruptedException e) {
 							}
 						}
+					}
+						System.out.println("Waiting on DATA packet from server.");
 					}
 					//System.out.println("Connection terminated.\n");
 				}
@@ -883,10 +914,11 @@ public class ErrorSimulator implements Runnable
 			try
 			{
 				// Socket used for sending and receiving packets from server
-				DatagramSocket sendReceiveServerSocket = new DatagramSocket();
+				DatagramSocket sendReceiveServerSocket = new DatagramSocket();	
 
 				// Socket used for sending and receiving packets from client
 				DatagramSocket sendReceiveClientSocket = new DatagramSocket();
+				sendReceiveClientSocket.setSoTimeout(1);	
 
 				// Flag set when error packet is received
 				boolean errorPacketReceived = false;
@@ -999,41 +1031,74 @@ public class ErrorSimulator implements Runnable
 				{
 				//	transferComplete = true;
 				}
-
+				
+				//to catch the server responding to a new WRQ
+				boolean unexpectedAck0 = false;
+				
+				//flag to set when a packet has been received for processing
+				boolean packetReceived;
+				boolean packetFromClient;
+				
+				//Set the timeout for the server socket so the error simulator checks for packets from both the client and the server
+				sendReceiveServerSocket.setSoTimeout(1);
+				
 				try
 				{
-					//while (!transferComplete)
-					while (true) 
-					{
-						// Creates a DatagramPacket to receive data packet from client
-						DatagramPacket dataPacket = TFTP.formPacket();
+				//while (!transferComplete)
+				while (true) 
+				{
+					// Creates a DatagramPacket to receive data packet from client
+					DatagramPacket receivedPacket = TFTP.formPacket();
 
-						// Receives data packet from client
-						System.out.println("Waiting for data from client");
-						sendReceiveClientSocket.receive(dataPacket);
+					// Receives data packet from client
+					System.out.println("Waiting for packet...");
+					
+					packetReceived = false;
+					packetFromClient = false;
+					
+					while(!packetReceived)
+					{
+						try {
+							sendReceiveClientSocket.receive(receivedPacket);
+							packetReceived = true;
+							packetFromClient = true;
+						}
+						catch(SocketTimeoutException e) {
+							try{
+								sendReceiveServerSocket.receive(receivedPacket);
+								packetReceived = true;
+							}
+							catch(SocketTimeoutException ex)	{}
+							}
+						}
+					
+					//If received packet is from client (DATA or ERROR)
+					if(packetFromClient)
+					{
 
 						// Transfer if client sends back an error packet other than error code 5
-						if (TFTP.getOpCode(dataPacket) == TFTP.ERROR_OP_CODE)
+						if (TFTP.getOpCode(receivedPacket) == TFTP.ERROR_OP_CODE)
 						{
-							if(TFTP.getErrorCode(dataPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID){
+							if(TFTP.getErrorCode(receivedPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID){
 								errorPacketReceived = true;
 							}
 						}
 
 						// Transfer is complete if data block is less than MAX_DATA_SIZE
-						if (dataPacket.getLength() < TFTP.MAX_DATA_SIZE)
+						//if (forwardedDataPacket.getLength() < TFTP.MAX_DATA_SIZE)
 						{
 						//	transferComplete = true;
 						}
-						TFTP.shrinkData(dataPacket);
+						
+						TFTP.shrinkData(receivedPacket);
 						System.out.println("[CLIENT=>ERRSIM]");
-						TFTP.printPacket(dataPacket);
+						TFTP.printPacket(receivedPacket);
 
 						// Sends data packet to server
 						DatagramPacket forwardedDataPacket = TFTP.formPacket(
 								serverAddressTID,
 								serverPortTID,
-								dataPacket.getData());
+								receivedPacket.getData());
 
 						packetDelayerThread = null;
 						tamperPacket(forwardedDataPacket, RECEIVED_FROM_CLIENT);
@@ -1070,7 +1135,6 @@ public class ErrorSimulator implements Runnable
 							}
 						} else {
 							// Proceed as normal otherwise
-							//tamperPacket(forwardedDataPacket, RECEIVED_FROM_CLIENT);
 							spawnUnknownTIDThread(forwardedDataPacket, serverAddressTID, serverPortTID);
 							System.out.println("[ERRSIM=>SERVER]");
 							TFTP.printPacket(forwardedDataPacket);
@@ -1085,20 +1149,30 @@ public class ErrorSimulator implements Runnable
 						}
 
 						// Creates a DatagramPacket to receive acknowledgment packet from server
-						DatagramPacket ackPacket = TFTP.formPacket();
+						//DatagramPacket ackPacket = TFTP.formPacket();
 
 						// Receives acknowledgment packet from server
-						System.out.println("Waiting for ack from server");
-						sendReceiveServerSocket.receive(ackPacket);
-						TFTP.shrinkData(ackPacket);
+						System.out.println("Expecting ACK from server");
+						
+						//sendReceiveServerSocket.receive(ackPacket);
+						
+					}
+					//if received packet is an ACK or ERROR
+					else {
+						TFTP.shrinkData(receivedPacket);
 						System.out.println("[SERVER=>ERRSIM]");
-						TFTP.printPacket(ackPacket);
+						TFTP.printPacket(receivedPacket);
 
-						// Sends acknowledgment packet to client
+						// Sends on acknowledgment packet to client
 						DatagramPacket forwardedAckPacket = TFTP.formPacket(
 								clientAddressTID,
 								clientPortTID,
-								ackPacket.getData());
+								receivedPacket.getData());
+						
+						if(TFTP.getBlockNumber(forwardedAckPacket) == 0)
+						{
+							unexpectedAck0 = true;
+						}
 
 						// Simulate network error if all of the following apply
 						// 1. Cause is server
@@ -1140,10 +1214,10 @@ public class ErrorSimulator implements Runnable
 						}
 						
 
-						// Transfer is complete if server sends back an error packet
-						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE)
+						// Transfer is complete if server sent an error packet (other than error code 5)
+						if (TFTP.getOpCode(receivedPacket) == TFTP.ERROR_OP_CODE)
 						{
-							if(TFTP.getErrorCode(ackPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID)
+							if(TFTP.getErrorCode(receivedPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID)
 							{
 								//	transferComplete = true;
 								break;
@@ -1158,6 +1232,8 @@ public class ErrorSimulator implements Runnable
 							} catch(InterruptedException e) {
 							}
 						}
+					}
+						System.out.println("Expecting DATA from client.");
 					}
 
 					System.out.println("Connection terminated.\n");
