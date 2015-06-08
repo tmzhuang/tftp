@@ -14,10 +14,10 @@ import java.util.*;
 public class Client implements Exitable, Runnable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
-	private static int SERVER_PORT = 69;
-	private static int ERRSIM_PORT = 68;
-	//private static int SERVER_PORT = 32002;
-	//private static int ERRSIM_PORT = 32001;
+	//private static int SERVER_PORT = 69;
+	//private static int ERRSIM_PORT = 68;
+	private static int SERVER_PORT = 32002;
+	private static int ERRSIM_PORT = 32001;
 	private InetAddress replyAddr;
 	private InetAddress sendAddr;
 	private int TID;
@@ -72,7 +72,7 @@ public class Client implements Exitable, Runnable {
 				// Get a packet from server
 				DatagramPacket receivePacket = TFTP.formPacket();
 				if (verbose) System.out.println("Waiting for ACK0...");
-			
+
 				for(int i = 0; i<RESEND_LIMIT; i++) {
 					try {
 						sendReceiveSocket.receive(receivePacket);
@@ -88,47 +88,47 @@ public class Client implements Exitable, Runnable {
 						sendReceiveSocket.send(requestPacket);
 					}
 				}
-			
-			TFTP.shrinkData(receivePacket);
-			this.replyAddr = receivePacket.getAddress();
-			this.TID = receivePacket.getPort();
 
-			// This block is entered if the packet received is not a valid ACK packet
-			String[] errorMessage = new String[1];
-			if (!TFTP.verifyAckPacket(receivePacket, 0, errorMessage)) {
-				// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
-				if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
-					System.out.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
-					return;
+				TFTP.shrinkData(receivePacket);
+				this.replyAddr = receivePacket.getAddress();
+				this.TID = receivePacket.getPort();
+
+				// This block is entered if the packet received is not a valid ACK packet
+				String[] errorMessage = new String[1];
+				if (!TFTP.verifyAckPacket(receivePacket, 0, errorMessage)) {
+					// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
+					if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
+						System.out.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
+						return;
+					}
+					// If the received packet is not an ACK or an ERROR packet, then send an illegal TFTP
+					// operation ERROR packet and abort the transfer
+					else {
+						// Creates an "illegal TFTP operation" error packet
+						DatagramPacket errorPacket = TFTP.formERRORPacket(
+								replyAddr,
+								TID,
+								TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
+								r.getFileName() + " could not be transferred because of the following error: " + errorMessage[0] + " (client expected a ACK packet with block#: 0)");
+
+						// Sends error packet
+						//TFTP.printPacket(errorPacket);
+						sendReceiveSocket.send(errorPacket);
+
+						// Echo error message
+						System.out.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+
+						return;
+					}
 				}
-				// If the received packet is not an ACK or an ERROR packet, then send an illegal TFTP
-				// operation ERROR packet and abort the transfer
-				else {
-					// Creates an "illegal TFTP operation" error packet
-					DatagramPacket errorPacket = TFTP.formERRORPacket(
-							replyAddr,
-							TID,
-							TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
-							r.getFileName() + " could not be transferred because of the following error: " + errorMessage[0] + " (client expected a ACK packet with block#: 0)");
 
-					// Sends error packet
-					//TFTP.printPacket(errorPacket);
-					sendReceiveSocket.send(errorPacket);
+				packetInOrder = TFTP.checkPacketInOrder(receivePacket, 0);
 
-					// Echo error message
-					System.out.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
-
-					return;
-				}
+				if (verbose && packetInOrder) System.out.println("ACK0 received.");
+			} catch(Exception e) {
+				System.out.println(e.getMessage());
+				return;
 			}
-			
-			packetInOrder = TFTP.checkPacketInOrder(receivePacket, 0);
-
-			if (verbose && packetInOrder) System.out.println("ACK0 received.");
-		} catch(Exception e) {
-			System.out.println(e.getMessage());
-			return;
-		}
 
 		} while(!packetInOrder);
 			
@@ -186,9 +186,9 @@ public class Client implements Exitable, Runnable {
 								return;
 							}
 							//otherwise re-send
-								if(verbose) System.out.println("\nTIMED OUT, RESENDING DATA" + TFTP.getBlockNumber(currentPacket));
-								sendReceiveSocket.send(currentPacket);
-								//TFTP.printPacket(currentPacket);
+							if(verbose) System.out.println("\nTIMED OUT, RESENDING DATA" + TFTP.getBlockNumber(currentPacket));
+							sendReceiveSocket.send(currentPacket);
+							//TFTP.printPacket(currentPacket);
 						}
 					}				
 					
@@ -282,7 +282,7 @@ public class Client implements Exitable, Runnable {
 	 */
 	public void read(InetAddress addr, String filePath, String mode) {
 		try {
-			
+
 			// Form request and send to server
 			Request r = new Request(Request.Type.READ,filePath,mode);
 			if (verbose) System.out.println("Sending a READ request to server for file \"" + r.getFileName() + "\".\n");
@@ -290,16 +290,16 @@ public class Client implements Exitable, Runnable {
 			DatagramPacket dataPacket;
 			// Send the request
 			sendReceiveSocket.send(requestPacket);
-			
+
 			boolean transferComplete = false;
 
 			boolean firstIteration = true;
-			
+
 			boolean packetInOrder;
-			
+
 			//To hold most recently sent packet for possible re-sending if needed.
 			//DatagramPacket previousPacket = requestPacket;
-			
+
 			int currentBlockNumber = 1;
 			byte[] fileBytes = new byte[0];
 			do {
@@ -308,12 +308,12 @@ public class Client implements Exitable, Runnable {
 
 				// Wait for DATA from server. If no response within set timeout limit, re-send packet (up to maximum re-send limit)
 				if (verbose) System.out.println("Waiting for DATA packet from server...");
-				
+
 				for(int i = 0; i<RESEND_LIMIT; i = i+1) {
 					try {
 						//System.out.println("Waiting...  " + i);
-							sendReceiveSocket.receive(dataPacket);
-							i = RESEND_LIMIT+1;		//If packet successfully received, leave loop
+						sendReceiveSocket.receive(dataPacket);
+						i = RESEND_LIMIT+1;		//If packet successfully received, leave loop
 					} catch(SocketTimeoutException e) {
 						//if re-send attempt limit reached, 'give up' and cancel transfer
 						if(i == RESEND_LIMIT-1)
@@ -329,7 +329,7 @@ public class Client implements Exitable, Runnable {
 						}
 					}
 				}
-				
+
 				TFTP.shrinkData(dataPacket);
 
 				// If this is the first DATA packet received, record the address and port
@@ -394,48 +394,48 @@ public class Client implements Exitable, Runnable {
 				if (dataPacket.getLength() < TFTP.MAX_PACKET_SIZE) {
 					transferComplete = true;
 				}
-				
+
 				packetInOrder = TFTP.checkPacketInOrder(dataPacket, currentBlockNumber);
-				
-			//If the packet was the expected sequential block number in the transfer (not duplicated or delayed), write the data to the file
-			if(packetInOrder){
-				// Write data to file
-				if (verbose) System.out.println("Appending current block to filebytes.");
-				fileBytes = TFTP.appendData(dataPacket, fileBytes);
-				if ((fileBytes.length*TFTP.MAX_DATA_SIZE) > TFTP.getFreeSpaceOnFileSystem(directory)) {
-					// Creates a "disk full" error packet
-					DatagramPacket errorPacket = TFTP.formERRORPacket(
-							replyAddr,
-							TID,
-							TFTP.ERROR_CODE_DISK_FULL,
-							"\"" + r.getFileName() + "\" could not be transferred because disk is full.");
 
-					// Sends error packet
-					try {
-						sendReceiveSocket.send(errorPacket);
-					} catch (Exception e) {
-						// Do nothing
+				//If the packet was the expected sequential block number in the transfer (not duplicated or delayed), write the data to the file
+				if(packetInOrder){
+					// Write data to file
+					if (verbose) System.out.println("Appending current block to filebytes.");
+					fileBytes = TFTP.appendData(dataPacket, fileBytes);
+					if ((fileBytes.length*TFTP.MAX_DATA_SIZE) > TFTP.getFreeSpaceOnFileSystem(directory)) {
+						// Creates a "disk full" error packet
+						DatagramPacket errorPacket = TFTP.formERRORPacket(
+								replyAddr,
+								TID,
+								TFTP.ERROR_CODE_DISK_FULL,
+								"\"" + r.getFileName() + "\" could not be transferred because disk is full.");
+
+						// Sends error packet
+						try {
+							sendReceiveSocket.send(errorPacket);
+						} catch (Exception e) {
+							// Do nothing
+						}
+
+						// Echo error message
+						if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_DISK_FULL + ": Disk full. Aborting transfer...\n");
+
+						// Closes socket and aborts thread
+						return;
 					}
-
-					// Echo error message
-					if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_DISK_FULL + ": Disk full. Aborting transfer...\n");
-
-					// Closes socket and aborts thread
-					return;
 				}
-			}
-				
+
 				// Form an ACK packet to respond with and send
 				DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, TFTP.getBlockNumber(dataPacket));
 				if (verbose) System.out.println("ACK " + TFTP.getBlockNumber(ackPacket) + " sent.");
 				sendReceiveSocket.send(ackPacket);
-				
-				
+
+
 				//Update the current block number only if the packet was not a duplicate/delayed
 				if(packetInOrder){
 					currentBlockNumber = (currentBlockNumber + 1) % 65536;
 				}
-				
+
 				// Newline
 				if (verbose) System.out.println();
 			} while (!transferComplete);

@@ -18,10 +18,10 @@ public class ErrorSimulator implements Runnable
 	 * Fields
 	 */
 	private DatagramSocket receiveSocket;
-	private static int RECEIVE_PORT = 68;
-	private static int SEND_PORT = 69;
-	//private static int RECEIVE_PORT = 32001;
-	//private static int SEND_PORT = 32002;
+	//private static int RECEIVE_PORT = 68;
+	//private static int SEND_PORT = 69;
+	private static int RECEIVE_PORT = 32001;
+	private static int SEND_PORT = 32002;
 
 	// Mode types
 	private static final int MODE_NORMAL		= 1;
@@ -948,16 +948,48 @@ public class ErrorSimulator implements Runnable
 				InetAddress serverAddressTID = firstAckPacket.getAddress();
 				int serverPortTID = firstAckPacket.getPort();
 
+				boolean packetLossTriggered = false;
+
 				// Sends acknowledgment packet to client
 				DatagramPacket forwardedFirstAckPacket = TFTP.formPacket(
 						clientAddressTID,
 						clientPortTID,
 						firstAckPacket.getData());
 				tamperPacket(forwardedFirstAckPacket, RECEIVED_FROM_SERVER);
-				spawnUnknownTIDThread(forwardedFirstAckPacket, clientAddressTID, clientPortTID);
-				System.out.println("[ERRSIM=>CLIENT]");
-				TFTP.printPacket(forwardedFirstAckPacket);
-				sendReceiveClientSocket.send(forwardedFirstAckPacket);
+				
+				tamperPacket(forwardedFirstAckPacket, RECEIVED_FROM_SERVER);
+				if (!errorSimulated && causeSelected == RECEIVED_FROM_SERVER &&
+						!TFTP.verifyErrorPacket(forwardedFirstAckPacket, errorMessage) &&
+						!packetLossTriggered &&
+						blockNumberSelected == TFTP.getBlockNumber(forwardedFirstAckPacket)) {
+					if (isDelayableError(modeSelected, errorSelected)) {
+						// Send current request now if duplicating
+						if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_DUPLICATE) {
+							System.out.println("[ERRSIM=>CLIENT]");
+							TFTP.printPacket(forwardedFirstAckPacket);
+							sendReceiveClientSocket.send(forwardedFirstAckPacket);
+						}
+						// Send a delayed packet
+						errorSimulated = true;
+						PacketDelayer packetDelayer = new PacketDelayer(sendReceiveClientSocket, forwardedFirstAckPacket, packetDelay);
+						packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
+						packetDelayerThread.start();
+					} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS && !errorSimulated) {
+						// If request loss error, we don't send a packet at all
+						System.out.println("SIMULATING LOST PACKET: ACK" + blockNumberSelected + ".\n");
+						// Break current loop and wait for next data packet
+						packetLossTriggered = true;
+					}
+				} else {
+					packetLossTriggered = false;
+					// Proceed as normal otherwise
+					// Sends data packet to client
+					//tamperPacket(forwardedFirstAckPacket, RECEIVED_FROM_SERVER);
+					spawnUnknownTIDThread(forwardedFirstAckPacket, clientAddressTID, clientPortTID);
+					System.out.println("[ERRSIM=>CLIENT]");
+					TFTP.printPacket(forwardedFirstAckPacket);
+					sendReceiveClientSocket.send(forwardedFirstAckPacket);
+				}
 
 				// Flag set when transfer is finished
 				//boolean transferComplete = false;
@@ -968,8 +1000,8 @@ public class ErrorSimulator implements Runnable
 				//	transferComplete = true;
 				}
 
-				try {
-					boolean packetLossTriggered = false;
+				try
+				{
 					//while (!transferComplete)
 					while (true) 
 					{
