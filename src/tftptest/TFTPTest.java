@@ -9,8 +9,6 @@ import java.util.*;
 import java.io.*;
 
 import org.junit.Test;
-import org.junit.Rule;
-import org.junit.rules.*;
 
 import tftp.*;
 
@@ -454,7 +452,7 @@ public class TFTPTest {
 		}
 	}
 
-	//public static boolean verifyRequestPacket(DatagramPacket packet)
+	//public static boolean verifyRequestPacket(DatagramPacket packet, String[] errorMessage)
 	@Test
 	public void VerifyRequestPacketTest1()
 	{
@@ -469,8 +467,9 @@ public class TFTPTest {
 					operation,
 					fileName,
 					mode);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyRequestPacket(packet));
+			assertTrue(TFTP.verifyRequestPacket(packet, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -492,8 +491,9 @@ public class TFTPTest {
 					operation,
 					fileName,
 					mode);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyRequestPacket(packet));
+			assertTrue(TFTP.verifyRequestPacket(packet, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -515,8 +515,9 @@ public class TFTPTest {
 					operation,
 					fileName,
 					mode);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyRequestPacket(packet));
+			assertTrue(TFTP.verifyRequestPacket(packet, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -538,8 +539,9 @@ public class TFTPTest {
 					operation,
 					fileName,
 					mode);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyRequestPacket(packet));
+			assertTrue(TFTP.verifyRequestPacket(packet, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -561,8 +563,10 @@ public class TFTPTest {
 					operation,
 					fileName,
 					mode);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyRequestPacket(packet));
+			assertFalse(TFTP.verifyRequestPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("Invalid mode"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -584,8 +588,10 @@ public class TFTPTest {
 					operation,
 					fileName,
 					mode);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyRequestPacket(packet));
+			assertFalse(TFTP.verifyRequestPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("Missing file name"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -603,8 +609,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyRequestPacket(packet));
+			assertFalse(TFTP.verifyRequestPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("First byte is not 0"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -622,8 +630,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyRequestPacket(packet));
+			assertFalse(TFTP.verifyRequestPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("Invalid op code"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -641,8 +651,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyRequestPacket(packet));
+			assertFalse(TFTP.verifyRequestPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("Missing final 0 byte"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -660,8 +672,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyRequestPacket(packet));
+			assertFalse(TFTP.verifyRequestPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("Invalid mode"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -679,8 +693,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyRequestPacket(packet));
+			assertFalse(TFTP.verifyRequestPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("No termination after final 0 byte"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -698,8 +714,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyRequestPacket(packet));
+			assertFalse(TFTP.verifyRequestPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("No termination after final 0 byte"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -719,8 +737,9 @@ public class TFTPTest {
 					69,
 					blockNumber,
 					new byte[0]);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyDataPacket(packet, blockNumber));
+			assertTrue(TFTP.verifyDataPacket(packet, blockNumber, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -739,8 +758,9 @@ public class TFTPTest {
 					69,
 					blockNumber,
 					new byte[0]);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyDataPacket(packet, blockNumber));
+			assertTrue(TFTP.verifyDataPacket(packet, blockNumber, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -758,8 +778,9 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					data);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyDataPacket(packet, 0));
+			assertTrue(TFTP.verifyDataPacket(packet, 0, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -777,8 +798,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					data);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyDataPacket(packet, 0));
+			assertFalse(TFTP.verifyDataPacket(packet, 0, errorMessage));
+			assertTrue(errorMessage[0].equals("First byte is not 0"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -796,8 +819,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					data);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyDataPacket(packet, 0));
+			assertFalse(TFTP.verifyDataPacket(packet, 0, errorMessage));
+			assertTrue(errorMessage[0].equals("Invalid op code"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -815,8 +840,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					data);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyDataPacket(packet, 0));
+			assertFalse(TFTP.verifyDataPacket(packet, 0, errorMessage));
+			assertTrue(errorMessage[0].equals("Invalid block number"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -834,8 +861,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					data);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyDataPacket(packet, 0));
+			assertFalse(TFTP.verifyDataPacket(packet, 0, errorMessage));
+			assertTrue(errorMessage[0].equals("Invalid block number"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -861,8 +890,9 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					data);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyDataPacket(packet, 0));
+			assertTrue(TFTP.verifyDataPacket(packet, 0, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -888,8 +918,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					data);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyDataPacket(packet, 0));
+			assertFalse(TFTP.verifyDataPacket(packet, 0, errorMessage));
+			assertTrue(errorMessage[0].equals("Packet too large"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -908,8 +940,9 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					blockNumber);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyAckPacket(packet, blockNumber));
+			assertTrue(TFTP.verifyAckPacket(packet, blockNumber, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -927,8 +960,9 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					blockNumber);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyAckPacket(packet, blockNumber));
+			assertTrue(TFTP.verifyAckPacket(packet, blockNumber, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -946,8 +980,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyAckPacket(packet, 0));
+			assertFalse(TFTP.verifyAckPacket(packet, 0, errorMessage));
+			assertTrue(errorMessage[0].equals("First byte is not 0"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -965,8 +1001,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyAckPacket(packet, 0));
+			assertFalse(TFTP.verifyAckPacket(packet, 0, errorMessage));
+			assertTrue(errorMessage[0].equals("Invalid op code"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -984,8 +1022,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyAckPacket(packet, 0));
+			assertFalse(TFTP.verifyAckPacket(packet, 0, errorMessage));
+			assertTrue(errorMessage[0].equals("Packet too small"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -1003,8 +1043,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyAckPacket(packet, 0));
+			assertFalse(TFTP.verifyAckPacket(packet, 0, errorMessage));
+			assertTrue(errorMessage[0].equals("Packet too large"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -1025,8 +1067,9 @@ public class TFTPTest {
 					69,
 					errorCode,
 					message);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyErrorPacket(packet));
+			assertTrue(TFTP.verifyErrorPacket(packet, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -1046,8 +1089,9 @@ public class TFTPTest {
 					69,
 					errorCode,
 					message);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyErrorPacket(packet));
+			assertTrue(TFTP.verifyErrorPacket(packet, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -1068,8 +1112,10 @@ public class TFTPTest {
 					69,
 					errorCode,
 					message);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyErrorPacket(packet));
+			assertFalse(TFTP.verifyErrorPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("Invalid error code"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -1087,8 +1133,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyErrorPacket(packet));
+			assertFalse(TFTP.verifyErrorPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("First byte is not 0"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -1106,8 +1154,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyErrorPacket(packet));
+			assertFalse(TFTP.verifyErrorPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("Invalid op code"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -1125,8 +1175,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyErrorPacket(packet));
+			assertFalse(TFTP.verifyErrorPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("Missing 0 byte separating op code and error code"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -1144,8 +1196,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyErrorPacket(packet));
+			assertFalse(TFTP.verifyErrorPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("Missing final 0 byte"));
 		}
 		catch (UnknownHostException e)
 		{
@@ -1163,8 +1217,9 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertTrue(TFTP.verifyErrorPacket(packet));
+			assertTrue(TFTP.verifyErrorPacket(packet, errorMessage));
 		}
 		catch (UnknownHostException e)
 		{
@@ -1182,8 +1237,10 @@ public class TFTPTest {
 					InetAddress.getLocalHost(),
 					69,
 					dataBuf);
+			String[] errorMessage = new String[1];
 
-			assertFalse(TFTP.verifyErrorPacket(packet));
+			assertFalse(TFTP.verifyErrorPacket(packet, errorMessage));
+			assertTrue(errorMessage[0].equals("No termination after final 0 byte"));
 		}
 		catch (UnknownHostException e)
 		{

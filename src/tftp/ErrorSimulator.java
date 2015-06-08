@@ -875,7 +875,6 @@ public class ErrorSimulator implements Runnable
 
 		public WriteTransferHandler(DatagramPacket clientRequestPacket)
 		{
-			System.out.println("Creating new WriteTransferHander");
 			this.clientRequestPacket = clientRequestPacket;
 		}
 
@@ -901,7 +900,6 @@ public class ErrorSimulator implements Runnable
 						clientRequestPacket.getData());
 
 				Thread packetDelayerThread = null;
-				
 				// Sends request packet through socket
 				tamperPacket(serverRequestPacket, RECEIVED_FROM_CLIENT);
 				if (isDelayableError(modeSelected, errorSelected) && modeSelected == MODE_READ_WRITE && !errorSimulated) {
@@ -918,7 +916,7 @@ public class ErrorSimulator implements Runnable
 					packetDelayerThread.start();
 				} else if (modeSelected == MODE_READ_WRITE && errorSelected == ERROR_REQUEST_LOSS && !errorSimulated) {
 					// If request loss error, we don't send a packet at all
-					System.out.println("SIMULATING LOST PACKET: WRQ.\n");
+					System.out.println("SIMULATING LOST PACKET: " + blockNumberSelected + ".");
 					errorSimulated = true;
 				} else {
 					// Proceed as normal otherwise
@@ -962,19 +960,18 @@ public class ErrorSimulator implements Runnable
 				sendReceiveClientSocket.send(forwardedFirstAckPacket);
 
 				// Flag set when transfer is finished
-				boolean transferComplete = false;
+				//boolean transferComplete = false;
 
 				// End transfer if last packet received was an error packet other than error 5
 				if (errorPacketReceived)
 				{
-					if(!(TFTP.getErrorCode(firstAckPacket)==TFTP.ERROR_CODE_UNKNOWN_TID))
-					transferComplete = true;
+				//	transferComplete = true;
 				}
 
 				try {
 					boolean packetLossTriggered = false;
-					while (!transferComplete)
-					//while (true) 
+					//while (!transferComplete)
+					while (true) 
 					{
 						// Creates a DatagramPacket to receive data packet from client
 						DatagramPacket dataPacket = TFTP.formPacket();
@@ -994,7 +991,7 @@ public class ErrorSimulator implements Runnable
 						// Transfer is complete if data block is less than MAX_DATA_SIZE
 						if (dataPacket.getLength() < TFTP.MAX_DATA_SIZE)
 						{
-							transferComplete = true;
+						//	transferComplete = true;
 						}
 						TFTP.shrinkData(dataPacket);
 						System.out.println("[CLIENT=>ERRSIM]");
@@ -1041,6 +1038,7 @@ public class ErrorSimulator implements Runnable
 							}
 						} else {
 							// Proceed as normal otherwise
+							//tamperPacket(forwardedDataPacket, RECEIVED_FROM_CLIENT);
 							spawnUnknownTIDThread(forwardedDataPacket, serverAddressTID, serverPortTID);
 							System.out.println("[ERRSIM=>SERVER]");
 							TFTP.printPacket(forwardedDataPacket);
@@ -1050,8 +1048,7 @@ public class ErrorSimulator implements Runnable
 						// End transfer if last packet received was an error packet
 						if (errorPacketReceived)
 						{
-							if(!(TFTP.getErrorCode(dataPacket)==TFTP.ERROR_CODE_UNKNOWN_TID))
-							transferComplete = true;
+							//transferComplete = true;
 							break;
 						}
 
@@ -1114,9 +1111,9 @@ public class ErrorSimulator implements Runnable
 						// Transfer is complete if server sends back an error packet
 						if (TFTP.getOpCode(ackPacket) == TFTP.ERROR_OP_CODE)
 						{
-							if(!(TFTP.getErrorCode(ackPacket)==TFTP.ERROR_CODE_UNKNOWN_TID))
+							if(TFTP.getErrorCode(ackPacket)!=TFTP.ERROR_CODE_UNKNOWN_TID)
 							{
-								transferComplete = true;
+								//	transferComplete = true;
 								break;
 							}
 						}

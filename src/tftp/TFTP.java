@@ -542,7 +542,7 @@ public class TFTP {
 			// Check if next byte is READ_OP_CODE or WRITE_OP_CODE
 			if (data[offset.getOffset()] != READ_OP_CODE && data[offset.getOffset()] != WRITE_OP_CODE)
 			{
-				errorMessage[0] = "Invalid opcode";
+				errorMessage[0] = "Invalid op code";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -574,9 +574,17 @@ public class TFTP {
 
 			// Check for "netascii" or "octet" (any case)
 			int modeStartOffset = offset.getOffset();
-			while (data[offset.getOffset()] != 0)
+			try
 			{
-				offset.incrementOffset(1);
+				while (data[offset.getOffset()] != 0)
+				{
+					offset.incrementOffset(1);
+				}
+			}
+			catch (Exception e)
+			{
+				errorMessage[0] = "Missing final 0 byte";
+				return false;
 			}
 
 			// Calculates the mode length using the offset
@@ -656,7 +664,7 @@ public class TFTP {
 			// Check if next byte is OPCODE_DATA
 			if (data[offset.getOffset()] != DATA_OP_CODE)
 			{
-				errorMessage[0] = "Invalid opcode";
+				errorMessage[0] = "Invalid op code";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -724,7 +732,7 @@ public class TFTP {
 			// Check if next byte is OPCODE_ACK
 			if (data[offset.getOffset()] != ACK_OP_CODE)
 			{
-				errorMessage[0] = "Invalid opcode";
+				errorMessage[0] = "Invalid op code";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -776,7 +784,7 @@ public class TFTP {
 			// Check if next byte is OPCODE_ERROR
 			if (data[offset.getOffset()] != ERROR_OP_CODE)
 			{
-				errorMessage[0] = "Invalid opcode";
+				errorMessage[0] = "Invalid op code";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -784,7 +792,7 @@ public class TFTP {
 			// Check if next byte is 0
 			if (data[offset.getOffset()] != 0)
 			{
-				errorMessage[0] = "Missing byte separating op code and error code";
+				errorMessage[0] = "Missing 0 byte separating op code and error code";
 				return false;
 			}
 			offset.incrementOffset(1);
@@ -799,9 +807,17 @@ public class TFTP {
 			offset.incrementOffset(1);
 
 			// Check for text data (message)
-			while (data[offset.getOffset()] != 0)
+			try
 			{
-				offset.incrementOffset(1);
+				while (data[offset.getOffset()] != 0)
+				{
+					offset.incrementOffset(1);
+				}
+			}
+			catch (IndexOutOfBoundsException e)
+			{
+				errorMessage[0] = "Missing final 0 byte";
+				return false;
 			}
 
 			// Check if last byte is 0
