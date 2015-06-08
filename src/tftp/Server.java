@@ -278,41 +278,49 @@ public class Server implements Exitable, Runnable {
 								unexpectedPacket = true;
 								continue;
 							}
-							
+
+							// This block is entered if the packet received is not a valid ACK packet
+							String[] errorMessage = new String[1];
+							if (!TFTP.verifyAckPacket(receivePacket, currentBlockNumber, errorMessage)) {
+								// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
+								if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
+									System.out.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
+
+									// Closes socket and aborts thread
+									socket.close();
+									return;
+								}
+								// If the received packet is not an ACK or an ERROR packet, then send an illegal TFTP
+								// operation ERROR packet and abort the transfer
+								else {
+									// Creates an "illegal TFTP operation" error packet
+									DatagramPacket errorPacket = TFTP.formERRORPacket(
+											replyAddr,
+											TID,
+											TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
+											fileName + " could not be transferred because of the following error: " + errorMessage[0] + " (server expected a ACK packet with block#: " + currentBlockNumber + ")");
+
+									// Sends error packet
+									socket.send(errorPacket);
+
+									// Echo error message
+									System.out.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+
+									// Closes socket and aborts thread
+									socket.close();
+									return;
+								}
+							}
+
+							// Ignore acknowledgement packet if duplicate
+							if (TFTP.getBlockNumber(receivePacket) < currentBlockNumber)
+							{
+								System.out.println("Ignoring previous duplicate ACK" + TFTP.getBlockNumber(receivePacket) + " packet received...\n");
+								unexpectedPacket = true;
+								continue;
+							}
 						} while (unexpectedPacket);
 
-						// This block is entered if the packet received is not a valid ACK packet
-						String[] errorMessage = new String[1];
-						if (!TFTP.verifyAckPacket(receivePacket, currentBlockNumber, errorMessage)) {
-							// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
-							if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
-								System.out.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
-
-								// Closes socket and aborts thread
-								socket.close();
-								return;
-							}
-							// If the received packet is not an ACK or an ERROR packet, then send an illegal TFTP
-							// operation ERROR packet and abort the transfer
-							else {
-								// Creates an "illegal TFTP operation" error packet
-								DatagramPacket errorPacket = TFTP.formERRORPacket(
-										replyAddr,
-										TID,
-										TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION,
-										fileName + " could not be transferred because of the following error: " + errorMessage[0] + " (server expected a ACK packet with block#: " + currentBlockNumber + ")");
-
-								// Sends error packet
-								socket.send(errorPacket);
-
-								// Echo error message
-								System.out.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
-								
-								// Closes socket and aborts thread
-								socket.close();
-								return;
-							}
-						}
 
 					if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received.");
 					// Newline
