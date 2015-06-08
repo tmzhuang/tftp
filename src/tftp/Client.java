@@ -388,7 +388,7 @@ public class Client implements Exitable, Runnable {
 				}
 
 				if (verbose) System.out.println("DATA" + TFTP.getBlockNumber(dataPacket) + " received.");
-				if (verbose) System.out.println("The size of the data was " + TFTP.getData(dataPacket).length + ".");
+				//if (verbose) System.out.println("The size of the data was " + TFTP.getData(dataPacket).length + ".");
 
 				// Transfer is complete if data block is less than MAX_PACKET_SIZE
 				if (dataPacket.getLength() < TFTP.MAX_PACKET_SIZE) {
@@ -400,7 +400,7 @@ public class Client implements Exitable, Runnable {
 				//If the packet was the expected sequential block number in the transfer (not duplicated or delayed), write the data to the file
 				if(packetInOrder){
 					// Write data to file
-					if (verbose) System.out.println("Appending current block to filebytes.");
+					//if (verbose) System.out.println("Appending current block to filebytes.");
 					fileBytes = TFTP.appendData(dataPacket, fileBytes);
 					if ((fileBytes.length*TFTP.MAX_DATA_SIZE) > TFTP.getFreeSpaceOnFileSystem(directory)) {
 						// Creates a "disk full" error packet

@@ -218,7 +218,7 @@ public class Server implements Exitable, Runnable {
 				// Send a packet
 				try {
 					if (verbose) System.out.println("Sending DATA block number " + currentBlockNumber + ".");
-					if (verbose) System.out.println("Block size is " + TFTP.getData(currentPacket).length + ".");
+					//if (verbose) System.out.println("Block size is " + TFTP.getData(currentPacket).length + ".");
 					socket.send(currentPacket);
 				} catch(Exception e) {}
 
