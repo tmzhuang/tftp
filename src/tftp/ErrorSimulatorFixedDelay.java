@@ -65,6 +65,8 @@ public class ErrorSimulatorFixedDelay
 	private int causeSelected = -1;
 	private int blockNumberSelected = -1;
 
+	private InetAddress sendAddr;
+
 	/**
 	 * Class constructor
 	 */
@@ -82,7 +84,22 @@ public class ErrorSimulatorFixedDelay
 		Scanner scanner = new Scanner(System.in);
 
 		boolean validInput;
-		
+
+		// Get the IP address or host name from user input
+		for (boolean validHost = false; validHost == false; )
+		{
+			System.out.println("Please enter the IP address of the server:");
+			String host = scanner.next();
+			try {
+				sendAddr = InetAddress.getByName(host);
+			} catch(UnknownHostException e) {
+				System.out.println("Invalid host name or IP address. Please try again.\n");
+				continue;
+			}
+			validHost = true;
+			System.out.println("");
+		}
+
 		String modeSelectedString;
 		do
 		{
@@ -325,22 +342,12 @@ public class ErrorSimulatorFixedDelay
 		{
 			// Change the mode to an invalid mode
 			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for invalid mode");
-			InetAddress address = null;
-			try
-			{
-				address = InetAddress.getLocalHost();
-			}
-			catch (UnknownHostException e)
-			{
-				e.printStackTrace();
-			}
-			int port = 65535;
 			String operation = TFTP.opCodeToString(TFTP.getOpCode(packet));
 			String fileName = TFTP.parseRQ(packet).getFileName();
 			String invalidMode = "invalidMode";
 			DatagramPacket newRequestPacket = TFTP.formRQPacket(
-					address,
-					port,
+					sendAddr,
+					SEND_PORT,
 					operation,
 					fileName,
 					invalidMode);
@@ -350,22 +357,12 @@ public class ErrorSimulatorFixedDelay
 		{
 			// Delete the file name from the data buffer
 			System.out.println("Simulating ERROR 4 (Illegal TFTP Operation) for missing file name");
-			InetAddress address = null;
-			try
-			{
-				address = InetAddress.getLocalHost();
-			}
-			catch (UnknownHostException e)
-			{
-				e.printStackTrace();
-			}
-			int port = 65535;
 			String operation = TFTP.opCodeToString(TFTP.getOpCode(packet));
 			String missingFileName = "";
 			String mode = TFTP.parseRQ(packet).getMode();
 			DatagramPacket newRequestPacket = TFTP.formRQPacket(
-					address,
-					port,
+					sendAddr,
+					SEND_PORT,
 					operation,
 					missingFileName,
 					mode);
@@ -596,7 +593,7 @@ public class ErrorSimulatorFixedDelay
 
 				// Creates a DatagramPacket to send request to server
 				DatagramPacket serverRequestPacket = TFTP.formPacket(
-						InetAddress.getLocalHost(),
+						sendAddr,
 						SEND_PORT,
 						clientRequestPacket.getData());
 
@@ -1180,7 +1177,7 @@ public class ErrorSimulatorFixedDelay
 				
 				// Creates a DatagramPacket to send request to server
 				DatagramPacket serverRequestPacket = TFTP.formPacket(
-						InetAddress.getLocalHost(),
+						sendAddr,
 						SEND_PORT,
 						clientRequestPacket.getData());
 				if (errorSimulation)
