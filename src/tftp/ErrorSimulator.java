@@ -701,9 +701,6 @@ public class ErrorSimulator implements Runnable
 						// Creates a DatagramPacket to receive data packet from server
 						DatagramPacket receivedPacket = TFTP.formPacket();
 
-						// Receives data packet from server
-						//sendReceiveServerSocket.receive(receivedPacket);
-						// Receives packet from client or server
 						System.out.println("Waiting for packet...");
 						
 						packetReceived = false;
@@ -874,8 +871,8 @@ public class ErrorSimulator implements Runnable
 							} catch(InterruptedException e) {
 							}
 						}
+						System.out.println("Expecting DATA packet from server.");
 					}
-					System.out.println("Expecting DATA packet from server.");
 					}
 					//System.out.println("Connection terminated.\n");
 				}
@@ -1220,8 +1217,8 @@ public class ErrorSimulator implements Runnable
 							} catch(InterruptedException e) {
 							}
 						}
+						System.out.println("Expecting DATA from client.");
 					}
-					System.out.println("Expecting DATA from client.");
 					}
 
 					System.out.println("Connection terminated.\n");
