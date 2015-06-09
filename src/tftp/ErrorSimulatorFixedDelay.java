@@ -671,7 +671,7 @@ public class ErrorSimulatorFixedDelay
 					{
 						// Do nothing
 					}
-					System.out.println("Sending duplicate packet");
+					System.out.println("Sending duplicated packet");
 					System.out.println("[ ErrorSim -> Server ]");
 					TFTP.printPacket(serverRequestPacket);
 					sendReceiveServerSocket.send(serverRequestPacket);
@@ -848,7 +848,7 @@ public class ErrorSimulatorFixedDelay
 								TFTP.printPacket(forwardedAckForFirstSentPacket);
 								sendReceiveServerSocket.send(forwardedAckForFirstSentPacket);
 
-								System.out.println("Sending delayed packet");
+								System.out.println("Sending delayed DATA packet");
 								System.out.println("[ ErrorSim -> Client ]");
 								TFTP.printPacket(forwardedDataPacket);
 								sendReceiveClientSocket.send(forwardedDataPacket);
@@ -871,10 +871,6 @@ public class ErrorSimulatorFixedDelay
 								// Do nothing
 							}
 
-							System.out.println("[ ErrorSim -> Client ]");
-							TFTP.printPacket(forwardedDataPacket);
-							sendReceiveClientSocket.send(forwardedDataPacket);
-							
 							DatagramPacket ackForFirstDuplicatePacket = receivePacket(sendReceiveClientSocket);
 							if (ackForFirstDuplicatePacket == null)
 							{
@@ -883,7 +879,7 @@ public class ErrorSimulatorFixedDelay
 							System.out.println("[ Client -> ErrorSim ]");
 							TFTP.shrinkData(ackForFirstDuplicatePacket);
 							TFTP.printPacket(ackForFirstDuplicatePacket);
-							
+
 							DatagramPacket forwardedAckForFirstDuplicatePacket = TFTP.formPacket(
 									serverAddressTID,
 									serverPortTID,
@@ -891,12 +887,18 @@ public class ErrorSimulatorFixedDelay
 							System.out.println("[ ErrorSim -> Server ]");
 							TFTP.printPacket(forwardedAckForFirstDuplicatePacket);
 							sendReceiveServerSocket.send(forwardedAckForFirstDuplicatePacket);
-							
+
+							System.out.println("Sending duplicated DATA packet");
+							System.out.println("[ ErrorSim -> Client ]");
+							TFTP.printPacket(forwardedDataPacket);
+							sendReceiveClientSocket.send(forwardedDataPacket);
+
 							errorSimulation = false;
 							simulateError.put("simulateDuplicatePacket", false);
 						}
 						else if (simulateError.get("simulateLostPacket"))
 						{
+							System.out.println("Losing DATA packet");
 							System.out.println("Expecting server to resend latest DATA packet...\n");
 							try
 							{
@@ -1059,6 +1061,7 @@ public class ErrorSimulatorFixedDelay
 							TFTP.printPacket(forwardedRetransmittedAckPacket);
 							sendReceiveServerSocket.send(forwardedRetransmittedAckPacket);
 
+							System.out.println("Sending delayed ACK packet");
 							System.out.println("[ ErrorSim -> Server ]");
 							TFTP.printPacket(forwardedAckPacket);
 							sendReceiveServerSocket.send(forwardedAckPacket);
@@ -1071,8 +1074,6 @@ public class ErrorSimulatorFixedDelay
 							System.out.println("[ ErrorSim -> Server ]");
 							TFTP.printPacket(forwardedAckPacket);
 							sendReceiveServerSocket.send(forwardedAckPacket);
-
-							// Wait a little bit
 							try
 							{
 								Thread.sleep(RETRANSMITTION_TIMEOUT/2);
@@ -1082,6 +1083,7 @@ public class ErrorSimulatorFixedDelay
 								// Do nothing
 							}
 
+							System.out.println("Sending duplicated ACK packet");
 							System.out.println("[ ErrorSim -> Server ]");
 							TFTP.printPacket(forwardedAckPacket);
 							sendReceiveServerSocket.send(forwardedAckPacket);
@@ -1091,6 +1093,7 @@ public class ErrorSimulatorFixedDelay
 						}
 						else if (simulateError.get("simulateLostPacket"))
 						{
+							System.out.println("Losing ACK packet");
 							System.out.println("Expecting server to resend latest DATA packet...\n");
 							// Wait a little bit
 							try
@@ -1305,7 +1308,7 @@ public class ErrorSimulatorFixedDelay
 						// Do nothing
 					}
 
-					System.out.println("Sending duplicate packet");
+					System.out.println("Sending duplicated WRQ packet");
 					System.out.println("[ ErrorSim -> Server ]");
 					TFTP.printPacket(serverRequestPacket);
 					sendReceiveServerSocket.send(serverRequestPacket);
@@ -1413,7 +1416,7 @@ public class ErrorSimulatorFixedDelay
 					TFTP.printPacket(forwardedFirstAckPacket);
 					sendReceiveClientSocket.send(forwardedFirstAckPacket);
 
-					System.out.println("Sending duplicate packet");
+					System.out.println("Sending duplicated ACK packet");
 					System.out.println("[ ErrorSim -> Client ]");
 					TFTP.printPacket(forwardedFirstAckPacket);
 					sendReceiveClientSocket.send(forwardedFirstAckPacket);
@@ -1423,6 +1426,7 @@ public class ErrorSimulatorFixedDelay
 				}
 				else if (simulateError.get("simulateLostPacket"))
 				{
+					System.out.println("Losing ACK packet");
 					errorSimulation = false;
 					simulateError.put("simulateLostPacket", false);
 				}
@@ -1597,6 +1601,7 @@ public class ErrorSimulatorFixedDelay
 							{
 								// Do nothing
 							}
+							System.out.println("Sending duplicated DATA packet");
 							System.out.println("[ ErrorSim -> Server ]");
 							TFTP.printPacket(forwardedDataPacket);
 							sendReceiveServerSocket.send(forwardedDataPacket);
@@ -1623,6 +1628,7 @@ public class ErrorSimulatorFixedDelay
 						}
 						else if (simulateError.get("simulateLostPacket"))
 						{
+							System.out.println("Losing DATA packet");
 							System.out.println("Expecting client to resend latest DATA packet...\n");
 							try
 							{
@@ -1741,6 +1747,7 @@ public class ErrorSimulatorFixedDelay
 							TFTP.printPacket(forwardedRetransmittedAckPacket);
 							sendReceiveClientSocket.send(forwardedRetransmittedAckPacket);
 
+							System.out.println("Sending delayed ACK packet");
 							System.out.println("[ ErrorSim -> Client ]");
 							TFTP.printPacket(forwardedAckPacket);
 							sendReceiveClientSocket.send(forwardedAckPacket);
@@ -1753,8 +1760,6 @@ public class ErrorSimulatorFixedDelay
 							System.out.println("[ ErrorSim -> Client ]");
 							TFTP.printPacket(forwardedAckPacket);
 							sendReceiveClientSocket.send(forwardedAckPacket);
-
-							// Wait a little bit
 							try
 							{
 								Thread.sleep(RETRANSMITTION_TIMEOUT/2);
@@ -1763,7 +1768,7 @@ public class ErrorSimulatorFixedDelay
 							{
 								// Do nothing
 							}
-
+							System.out.println("Sending duplicated ACK packet");
 							System.out.println("[ ErrorSim -> Client ]");
 							TFTP.printPacket(forwardedAckPacket);
 							sendReceiveClientSocket.send(forwardedAckPacket);
@@ -1773,8 +1778,8 @@ public class ErrorSimulatorFixedDelay
 						}
 						else if (simulateError.get("simulateLostPacket"))
 						{
+							System.out.println("Losing ACK packet");
 							System.out.println("Expecting client to resend latest DATA packet...\n");
-							// Wait a little bit
 							try
 							{
 								Thread.sleep(RETRANSMITTION_TIMEOUT/2);
@@ -1783,7 +1788,6 @@ public class ErrorSimulatorFixedDelay
 							{
 								// Do nothing
 							}
-							
 							// Receive retransmitted data packet from client
 							DatagramPacket retransmittedDataPacket = receivePacket(sendReceiveClientSocket);
 							if (retransmittedDataPacket == null)
