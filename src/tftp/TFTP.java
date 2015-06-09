@@ -960,7 +960,7 @@ public class TFTP {
 				t = Request.Type.WRITE;
 				break;
 			default:
-				throw new IllegalArgumentException();
+				return null;
 				//break;
 		}
 
@@ -989,7 +989,7 @@ public class TFTP {
 		// Loop through array until 0 byte is found or out of bound occurs
 		while (buf[currentIndex] != TFTP_PADDING) {
 			currentIndex++;
-			if (currentIndex >= len) throw new IllegalArgumentException();
+			if (currentIndex >= len) return null;
 		}
 		int modeLength = currentIndex - modeStartIndex;
 		System.arraycopy(buf,modeStartIndex,mbytes,0,modeLength);
@@ -1153,13 +1153,18 @@ public class TFTP {
 	 * @param packet A TFTP DatagramPacket
 	 */
 	public static void printPacket(DatagramPacket packet) {
-		int operation = getOpCode(packet);
+				int operation = getOpCode(packet);
 		if (VERBOSITY == 1)
 		{
 			switch(operation)
 			{
 				case READ_OP_CODE:
 				case WRITE_OP_CODE:
+					Request request = parseRQ(packet);
+					if (request == null) {
+						System.out.println("Could not print malformed packet.");
+						return;
+					}
 					try { System.out.println(opCodeToString(operation) + " Request packet for file: " + parseRQ(packet).getFileName() + "\n"); }
 					catch (ArrayIndexOutOfBoundsException e) { System.out.println("Unknown Read/Write request packet received\n"); }
 					break;
