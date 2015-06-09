@@ -975,6 +975,7 @@ public class ErrorSimulator implements Runnable
 						packetDelayerThread = new Thread(packetDelayer, "Packet Delayer Thread");
 						packetDelayerThread.start();
 					} else if (modeSelected == MODE_DATA_ACK && errorSelected == ERROR_ACK_DATA_LOSS && !errorSimulated) {
+						errorSimulated = true;
 						// If request loss error, we don't send a packet at all
 						System.out.println("SIMULATING LOST PACKET: ACK" + blockNumberSelected + ".\n");
 						// Break current loop and wait for next data packet
