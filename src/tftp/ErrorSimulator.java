@@ -10,7 +10,7 @@ import tftp.TFTP;
  * Implementation of the TFTP file transfer program on error simulator side.
  * 
  * @author Team 4
- * @version Iteration 3
+ * @version Iteration 5
  */
 public class ErrorSimulator implements Runnable
 {

@@ -1,9 +1,3 @@
-/**
- * TFTP Error Simulator
- *
- * @author	Group 4
- * @since	May 6, 2015
- */
 package tftp;
 
 import java.io.IOException;
@@ -14,15 +8,22 @@ import java.util.Scanner;
 
 import tftp.TFTP;
 
+/**
+ * TFTP Error Simulator with a fixed delay
+ *
+ * @author	Group 4
+ * @version Iteration 5
+ * @since	May 6, 2015
+ */
 public class ErrorSimulatorFixedDelay
 {
 	/**
 	 * Fields
 	 */
-	//private static int RECEIVE_PORT = 68;
-	//private static int SEND_PORT = 69;
-	private static int RECEIVE_PORT = 32001;
-	private static int SEND_PORT = 32002;
+	private static int RECEIVE_PORT = 68;
+	private static int SEND_PORT = 69;
+	//private static int RECEIVE_PORT = 32001;
+	//private static int SEND_PORT = 32002;
 	private static final int RETRANSMITTION_TIMEOUT = 2000;
 	private static final int ADDED_DELAY = 10;
 	private static final int MAX_TIMEOUT_COUNT = 3;

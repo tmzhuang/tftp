@@ -15,7 +15,7 @@ import java.io.*;
  * files, and some block manipulation algorithm.
  * 
  * @author Team 4
- * @version Iteration 3
+ * @version Iteration 5
  */
 public class TFTP {
 	public static final int BUF_SIZE = 100;
@@ -123,6 +123,19 @@ public class TFTP {
 		return new DatagramPacket(data,currentIndex+1, addr, port);
 	}
 
+	/**
+	 * Forms a DatagramPacket using OPERATION,  with information about request type
+	 * FILENAME, and FILENAME
+	 * (read, write, or test), filename, and mode (ascii, octet, etc.).
+	 *
+	 * @param addr InetAddress of packet destination
+	 * @param port Port number of packet destination
+	 * @param operation String containing request type read or write
+	 * @param fileName String containing file name
+	 * @param mode String containing  the mode of transfer
+	 *
+	 * @return DatagramPacket for specified address and port with given request
+	 */
 	public static DatagramPacket formRQPacket(InetAddress addr, int port, String operation, String fileName, String mode) {
 		Request.Type operationType;
 		if (operation.equals("r"))
@@ -343,11 +356,11 @@ public class TFTP {
 	}
 
 	/**
-	 * Gets TODO(Brandon)
+	 * Gets the error message from the ERROR PACKET
 	 *
-	 * @param packet A TFTP DATA packet
+	 * @param packet A TFTP ERROR packet
 	 *
-	 * @return The data portion of a DATA packet as a byte array
+	 * @return The error message from the error packet
 	 */
 	public static String getErrorMessage(DatagramPacket packet) {
 		//If packet isn't an error, throw exception
@@ -362,6 +375,13 @@ public class TFTP {
 		return errorMsg;
 	}
 
+	/**
+	 * Gets the error code from the ERROR PACKET
+	 *
+	 * @param packet A TFTP ERROR packet
+	 *
+	 * @return The error code from the error packet
+	 */
 	public static int getErrorCode(DatagramPacket packet) {
 
 		//If packet isn't an error, throw exception
@@ -422,7 +442,6 @@ public class TFTP {
 
 		return new DatagramPacket(buf,buf.length,addr,port);
 	}
-
 
 	/**
 	 * Converts an integer to a 2-byte byte array.
@@ -522,7 +541,14 @@ public class TFTP {
 		return new DatagramPacket(buf, buf.length, addr, port);	
 	}
 
-	// Returns true if request packet matches TFTP specifications
+	/**
+	 * Verify validity of REQUEST PACKET and populates errorMessage[0] is an error occurs
+	 * 
+	 * @param packet TFTP REQUEST packet
+	 * @param errorMessage String[] which is populated with error message if invalid (index 0)
+	 * 
+	 * @return Returns true if DATA packet matches TFTP specifications
+	 */
 	public static boolean verifyRequestPacket(DatagramPacket packet, String[] errorMessage)
 	{
 		// Stores the data that we are checking against
@@ -635,7 +661,14 @@ public class TFTP {
 		}
 	}
 
-	// Returns true if data packet matches TFTP specifications
+	/**
+	 * Verify validity of DATA PACKET and populates errorMessage[0] is an error occurs
+	 * 
+	 * @param packet TFTP DATA packet
+	 * @param errorMessage String[] which is populated with error message if invalid (index 0)
+	 * 
+	 * @return Returns true if DATA packet matches TFTP specifications
+	 */
 	public static boolean verifyDataPacket(DatagramPacket packet, int blockNumber, String[] errorMessage)
 	{
 		assert((blockNumber >= 0) && (blockNumber <= MAX_BLOCK_NUMBER));
@@ -696,7 +729,14 @@ public class TFTP {
 		}
 	}
 
-	// Returns true if acknowledgement packet matches TFTP specifications
+	/**
+	 * Verify validity of ACK PACKET and populates errorMessage[0] is an error occurs
+	 * 
+	 * @param packet TFTP ACK packet
+	 * @param errorMessage String[] which is populated with error message if invalid (index 0)
+	 * 
+	 * @return Returns true if ACK packet matches TFTP specifications
+	 */
 	public static boolean verifyAckPacket(DatagramPacket packet, int blockNumber, String[] errorMessage)
 	{
 		assert((blockNumber >= 0) && (blockNumber <= MAX_BLOCK_NUMBER));
@@ -764,7 +804,14 @@ public class TFTP {
 		}
 	}
 
-	// Returns true if error packet matches TFTP specifications
+	/**
+	 * Verify validity of ERROR PACKET and populates errorMessage[0] is an error occurs
+	 * 
+	 * @param packet TFTP ERROR packet
+	 * @param errorMessage String[] which is populated with error message if invalid (index 0)
+	 * 
+	 * @return Returns true if ERROR packet matches TFTP specifications
+	 */
 	public static boolean verifyErrorPacket(DatagramPacket packet, String[] errorMessage)
 	{
 		// Stores the data that we are checking against
@@ -845,7 +892,14 @@ public class TFTP {
 		}
 	}
 	
-	//Returns true if the block number of the packet is the current block number expected in the transfer
+	/**
+	 * Verify the order of PACKET
+	 * 
+	 * @param packet TFTP ACK or DATA packet
+	 * @param blockNumber int which indicates block number of PACKET
+	 * 
+	 * @return true if the block number of the packet is the current block number expected in the transfer
+	 */
 	public static boolean checkPacketInOrder(DatagramPacket packet, int blockNumber)
 	{
 		// Stores the data that we are checking against
@@ -864,8 +918,6 @@ public class TFTP {
 		}
 		else
 			return false;
-		
-		
 	}
 
 	/**
@@ -951,16 +1003,37 @@ public class TFTP {
 		return (int)(myByte & 0xFF);
 	}
 
+	/**
+	 * Checks if file supplied by FILEPATH exists
+	 * 
+	 * @param filePath String containing the path of the file
+	 * 
+	 * @return true if file exists
+	 */
 	public static boolean fileExists(String filePath) {
 		File file = new File(filePath);
 		return file.exists();
 	}
 	
+	/**
+	 * Checks if file supplied by FILEPATH is a directory
+	 * 
+	 * @param filePath String containing the path of the file
+	 * 
+	 * @return true if file is a directory
+	 */
 	public static boolean isDirectory(String filePath) {
 		File file = new File(filePath);
 		return file.isDirectory();
 	}
 	
+	/**
+	 * Checks if file supplied by FILEPATH exists
+	 * 
+	 * @param filePath String containing the path of the file
+	 * 
+	 * @return true if file exists
+	 */
 	public static boolean isPathless(String filePath)
 	{
 		Path path = Paths.get(filePath);
@@ -968,11 +1041,25 @@ public class TFTP {
 		return path.getFileName().toString().equals(filePath);
 	}
 	
+	/**
+	 * Gets the free space on the file system of FILEPATH
+	 * 
+	 * @param filePath String containing the path of the file
+	 * 
+	 * @return long indicating the number of free space (bytes) on file system
+	 */
 	public static long getFreeSpaceOnFileSystem(String filePath) {
 		File file = new File(filePath);
 		return file.getFreeSpace();
 	}
 	
+	/**
+	 * Checks if file supplied by FILEPATH is readable
+	 * 
+	 * @param filePath String containing the path of the file
+	 * 
+	 * @return true if file readable
+	 */
 	public static boolean isReadable(String filePath) {
 		File file = new File(filePath);
 
@@ -991,11 +1078,25 @@ public class TFTP {
 		return true;
 	}
 	
+	/**
+	 * Checks if file supplied by FILEPATH is writable
+	 * 
+	 * @param filePath String containing the path of the file
+	 * 
+	 * @return true if file writable
+	 */
 	public static boolean isWritable(String filePath) {
 		File file = new File(filePath);
 		return file.canWrite();
 	}
 
+	/**
+	 * Deletes file
+	 * 
+	 * @param filePath String containing the path of the file
+	 * 
+	 * @return true is delete successful
+	 */
 	public static boolean delete(String filePath) {
 		File file = new File(filePath);
 		Path path = file.toPath();
@@ -1016,11 +1117,22 @@ public class TFTP {
 		return true;
 	}
 
+	/**
+	 * Checks if the port supplied is valid
+	 * 
+	 * @param port int containing the pot number
+	 * 
+	 * @return true if port is a valid port
+	 */
 	public static boolean isValidPort(int port) { 
 		return port >= MIN_PORT && port <= MAX_PORT;
 	}
 
-	// Truncates data buffer to fit data length of received packet
+	/**
+	 * Truncates data buffer to fit data length of received packet
+	 * 
+	 * @param packet A TFTP DatagramPacket
+	 */
 	public static void shrinkData(DatagramPacket packet) {
 		int dataLength = packet.getLength();
 		byte data[] = new byte[dataLength];
@@ -1028,6 +1140,11 @@ public class TFTP {
 		packet.setData(data);
 	}
 
+	/**
+	 * Outputs contents of DatagramPacket based on the VERBOSITY level
+	 * 
+	 * @param packet A TFTP DatagramPacket
+	 */
 	public static void printPacket(DatagramPacket packet) {
 		int operation = getOpCode(packet);
 		if (VERBOSITY == 1)
@@ -1090,7 +1207,13 @@ public class TFTP {
 		System.out.println("");
 	}
 
-	// Converts the OPCODE to it's string representation
+	/**
+	 * Converts the OPERATION to its string representation
+	 * 
+	 * @param operation int containing the operation
+	 * 
+	 * @return String containing the string representation of the operation
+	 */
 	public static String opCodeToString(int operation) {
 		switch(operation) {
 			case READ_OP_CODE:
@@ -1108,6 +1231,11 @@ public class TFTP {
 		}
 	}
 
+	/**
+	 * Wrapper for array offset that throws an exception if it goes beyond an upper bound
+	 * 
+	 * @author Team 4
+	 */
 	private static class CheckedOffset
 	{
 		private int offset;
@@ -1135,7 +1263,6 @@ public class TFTP {
 			}
 		}
 	}
-
 
 	/**
 	 * Returns true if packet1 has the same data as packet2 and false otherwise.

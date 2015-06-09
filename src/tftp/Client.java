@@ -9,15 +9,13 @@ import java.util.*;
  * Implementation of the TFTP file transfer program on client side.
  * 
  * @author Team 4
- * @version Iteration 3
+ * @version Iteration 5
  */
 public class Client implements Exitable, Runnable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
-	//private static int SERVER_PORT = 69;
-	//private static int ERRSIM_PORT = 68;
-	private static int SERVER_PORT = 32002;
-	private static int ERRSIM_PORT = 32001;
+	private static int SERVER_PORT = 69;
+	private static int ERRSIM_PORT = 68;
 	private InetAddress replyAddr;
 	private InetAddress sendAddr;
 	private int TID;
