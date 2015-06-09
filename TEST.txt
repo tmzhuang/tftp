@@ -119,7 +119,7 @@ Manual Test Plan
 	5. Initialize a correct RRQ from the client
 	6. Verify that the transfer behave like decribed in Test Requirements section once the valid WRQ has been specified
 
-06. Delayed DATA 1 packet during RRQ transfer: [Not Working ---  got two DATA packet from server, but respond both with error 5 correctly]
+06. Delayed DATA 1 packet during RRQ transfer: [Checked]
 	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
 	2. In the second menu enter 5 (ACK/DATA delay)
 	3. In the third menu enter 2 (Server will cause the simulated error)
@@ -155,7 +155,7 @@ Manual Test Plan
 	4. Initialize a correct WRQ from the client
 	5. Verify that the transfer behave like decribed in Test Requirements section once the valid WRQ has been specified
 
-10. Lost ACK 0 packet during WRQ transfer: [Not Working --- Error simulator is dropping every ACK 0]
+10. Lost ACK 0 packet during WRQ transfer: [Checked]
 	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
 	2. In the second menu enter 7 (ACK/DATA loss)
 	3. In the third menu enter 2 (Server will cause the simulated error)
@@ -189,7 +189,7 @@ Manual Test Plan
 	4. Initialize a correct RRQ from the client
 	5. Verify that the transfer behave like decribed in Test Requirements section once the valid WRQ has been specified
 
-14. Lost DATA 1 packet during RRQ transfer: [Checked -- unknown TID happens when block number is 2768]
+14. Lost DATA 1 packet during RRQ transfer: [Checked]
 	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
 	2. In the second menu enter 7 (ACK/DATA loss)
 	3. In the third menu enter 2 (Server will cause the simulated error)
@@ -218,7 +218,7 @@ Manual Test Plan
 
 [---Duplicate Packet---]
 
-17. Duplicate WRQ packet: [Not Working --- it delays each of the ACK packet after ]
+17. Duplicate WRQ packet: [Not Working --- No error code 5 is presented]
 	1. In Error Simulator console enter 2 (RRQ/WRQ packets) in the first menu
 	2. In the second menu enter 8 (Request duplicate)
 	3. In the third menu enter the amount of delayed time in ms, for example 3000, for the simulation
@@ -226,7 +226,7 @@ Manual Test Plan
 	4. Initialize a correct WRQ from the client
 	5. Verify that the transfer behave like decribed in Test Requirements section once the valid WRQ has been specified
 
-18. Duplicate DATA packet during WRQ transfer: [Not Working --- it time out the next block and blocks after it]
+18. Duplicate DATA packet during WRQ transfer: [Checked]
 	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
 	2. In the second menu enter 6 (ACK/DATA duplicate)
 	3. In the third menu enter 1 (Client will cause the simulated error)
@@ -236,7 +236,7 @@ Manual Test Plan
 	7. Initialize a correct WRQ from the client
 	8. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
 
-19. Duplicate ACK packet during WRQ transfer: [Checked]
+19. Duplicate ACK packet during WRQ transfer: []
 	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
 	2. In the second menu enter 6 (ACK/DATA duplicate)
 	3. In the third menu enter 2 (Server will cause the simulated error)
@@ -246,7 +246,7 @@ Manual Test Plan
 	7. Initialize a correct WRQ from the client
 	8. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
 
-20. Duplicate RRQ packet: [Not Working --- it proces the duplicate RRQ without responding with error code 5, instead it ignores the following ACK 1 packet?]
+20. Duplicate RRQ packet: []
 	1. In Error Simulator console enter 2 (RRQ/WRQ packets) in the first menu
 	2. In the second menu enter 8 (Request duplicate)
 	3. In the third menu enter the amount of delayed time in ms, for example 3000, for the simulation
@@ -254,7 +254,7 @@ Manual Test Plan
 	4. Initialize a correct RRQ from the client
 	5. Verify that the transfer behave like decribed in Test Requirements section once the valid WRQ has been specified
 
-21. Duplicate DATA packet during RRQ transfer: [Not Working --- DATA packets are having the same issue like case 17 and 18]
+21. Duplicate DATA packet during RRQ transfer: []
 	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
 	2. In the second menu enter 6 (ACK/DATA duplicate)
 	3. In the third menu enter 2 (Server will cause the simulated error)
@@ -264,7 +264,7 @@ Manual Test Plan
 	7. Initialize a correct RRQ from the client
 	8. Once the transfer has reached the specified block number, verify that the transfer behave like decribed in Test Requirements section.
 
-22. Duplicate ACK packet during RRQ transfer: [Checked]
+22. Duplicate ACK packet during RRQ transfer: []
 	1. In Error Simulator console enter 3 (DATA/ACK Packet) in the first menu
 	2. In the second menu enter 6 (ACK/DATA duplicate)
 	3. In the third menu enter 1 (Client will cause the simulated error)

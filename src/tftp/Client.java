@@ -31,11 +31,10 @@ public class Client implements Exitable, Runnable {
 	 */
 	public Client(String[] args) {
 		// Default states
-		verbose = false;
-		sendPort = SERVER_PORT;
+		verbose = true;
 
 		// Change states based on args
-		this.args = args;
+		/*this.args = args;
 		if (this.args.length >= 1) {
 			for (String arg: args) {
 				switch(arg) {
@@ -52,7 +51,7 @@ public class Client implements Exitable, Runnable {
 					System.exit(1);
 				}
 			}
-		}
+		}*/
 		// Create data socket for communicating with server
 		try {
 			sendReceiveSocket = new DatagramSocket();
@@ -485,6 +484,26 @@ public class Client implements Exitable, Runnable {
 		String fileName;
 		String filePath;
 		boolean badDirectory;
+		
+		do
+		{
+			System.out.println("Do you want to run with the error simulator? (y/n)");
+			String decision = in.next();
+			if (decision.equalsIgnoreCase("y"))
+			{
+				sendPort = ERRSIM_PORT;
+				break;
+			}
+			else if (decision.equalsIgnoreCase("n"))
+			{
+				sendPort = SERVER_PORT;
+				break;
+			}
+			else
+			{
+				System.out.println("Please enter y/Y or n/N.");
+			}
+		} while (true);
 		
 		// Get the IP address or host name from user input
 		for (boolean validHost = false; validHost == false; ) {

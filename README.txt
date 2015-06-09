@@ -4,7 +4,7 @@ SYSC 3303 Group Project
 (last modified README.txt June 2, 2015)
 
 
-Group 4, Iteration 2
+Group 4, Iteration 5
 --------------------
 
 Maryn Marsland 		[PROGRAMMER]

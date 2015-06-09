@@ -26,10 +26,10 @@ public class Server implements Exitable, Runnable {
 	 */
 	public Server(String[] args) {
 		// Default states
-		verbose = false;
+		verbose = true;
 
 		// Change states based on args
-		this.args = args;
+		/*this.args = args;
 		if (this.args.length >= 1) {
 			for (String arg: args) {
 				switch(arg) {
@@ -42,7 +42,7 @@ public class Server implements Exitable, Runnable {
 					System.exit(1);
 				}
 			}
-		}
+		}*/
 	}
 
 	/**

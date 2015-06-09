@@ -44,7 +44,7 @@ public class TFTP {
 	public static final int MAX_BLOCK_NUMBER = 65535;
 	public static final String MODE_NETASCII = "netascii";
 	public static final String MODE_OCTET = "octet";
-	public static int VERBOSITY = 3;
+	public static int VERBOSITY = 1;
 
 	/**
 	 * Forms a DatagramPacket with an empty data buffer large enough to hold the maximum
@@ -1193,6 +1193,11 @@ public class TFTP {
 			{
 				case READ_OP_CODE:
 				case WRITE_OP_CODE:
+					Request request = parseRQ(packet);
+					if (request == null) {
+						System.out.println("Could not print malformed packet.");
+						return;
+					}
 					try { System.out.println("File name = " + parseRQ(packet).getFileName()); }
 					catch (ArrayIndexOutOfBoundsException e) { System.out.println("File name = Unknown"); }
 					try { System.out.println("Mode = " + parseRQ(packet).getMode()); }
