@@ -9,7 +9,7 @@ import java.util.*;
  * Implementation of the TFTP file transfer program on client side.
  * 
  * @author Team 4
- * @version Iteration 3
+ * @version Iteration 5
  */
 public class Client implements Exitable, Runnable {
 	private DatagramSocket sendReceiveSocket;
