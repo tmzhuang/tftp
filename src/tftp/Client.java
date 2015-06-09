@@ -14,10 +14,8 @@ import java.util.*;
 public class Client implements Exitable, Runnable {
 	private DatagramSocket sendReceiveSocket;
 	private boolean verbose = true;
-	//private static int SERVER_PORT = 69;
-	//private static int ERRSIM_PORT = 68;
-	private static int SERVER_PORT = 32002;
-	private static int ERRSIM_PORT = 32001;
+	private static int SERVER_PORT = 69;
+	private static int ERRSIM_PORT = 68;
 	private InetAddress replyAddr;
 	private InetAddress sendAddr;
 	private int TID;
@@ -32,7 +30,29 @@ public class Client implements Exitable, Runnable {
 	 * Constructor for Client class, initialize a new socket upon called.
 	 */
 	public Client(String[] args) {
+		// Default states
+		verbose = false;
+		sendPort = SERVER_PORT;
+
+		// Change states based on args
 		this.args = args;
+		if (this.args.length >= 1) {
+			for (String arg: args) {
+				switch(arg) {
+				case "-v":
+					verbose = true;
+					System.out.println("Verbose mode is on.");
+					break;
+				case "-t": 
+					sendPort = ERRSIM_PORT; 
+					System.out.println("The client is being routed through the error simulator."); 
+					break;
+				default:
+					System.out.println("Invalid command line arugment received. Exiting client...");
+					System.exit(1);
+				}
+			}
+		}
 		// Create data socket for communicating with server
 		try {
 			sendReceiveSocket = new DatagramSocket();
@@ -71,7 +91,7 @@ public class Client implements Exitable, Runnable {
 			try {
 				// Get a packet from server
 				DatagramPacket receivePacket = TFTP.formPacket();
-				if (verbose) System.out.println("Waiting for ACK0...");
+				if (verbose) System.out.println("Waiting for ACK 0...");
 
 				for(int i = 0; i<RESEND_LIMIT; i++) {
 					try {
@@ -84,7 +104,7 @@ public class Client implements Exitable, Runnable {
 							return;
 						}
 						//otherwise re-send
-						if(verbose) System.out.println("\nTIMED OUT, RESENDING WRITE REQUEST.\n");
+						if(verbose) System.out.println("\nServer timed out. WRQ resent.\n");
 						sendReceiveSocket.send(requestPacket);
 					}
 				}
@@ -98,7 +118,7 @@ public class Client implements Exitable, Runnable {
 				if (!TFTP.verifyAckPacket(receivePacket, 0, errorMessage)) {
 					// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
 					if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
-						System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
+						if(verbose) System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 						return;
 					}
 					// If the received packet is not an ACK or an ERROR packet, then send an illegal TFTP
@@ -116,7 +136,7 @@ public class Client implements Exitable, Runnable {
 						sendReceiveSocket.send(errorPacket);
 
 						// Echo error message
-						System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+						if(verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
 
 						return;
 					}
@@ -156,7 +176,7 @@ public class Client implements Exitable, Runnable {
 			if(packetInOrder){
 				// Send a packet
 				currentBlockNumber = TFTP.getBlockNumber(currentPacket);
-				if (verbose) System.out.println("Sending DATA" + currentBlockNumber + ".");
+				if (verbose) System.out.println("DATA " + currentBlockNumber + " sent.");
 				//if (verbose) System.out.println("Block size is" + TFTP.getData(currentPacket).length + ".");
 				sendReceiveSocket.send(currentPacket);
 			}
@@ -165,7 +185,7 @@ public class Client implements Exitable, Runnable {
 			try {
 				// Get a packet from server
 				DatagramPacket receivePacket;
-				if (verbose) System.out.println("Waiting for ACK" + currentBlockNumber + "...");
+				if (verbose) System.out.println("Waiting for ACK from server...");
 
 				// Flag set to true if an unexpected packet is received
 				boolean unexpectedPacket;
@@ -186,7 +206,7 @@ public class Client implements Exitable, Runnable {
 								return;
 							}
 							//otherwise re-send
-							if(verbose) System.out.println("\nTIMED OUT, RESENDING DATA" + TFTP.getBlockNumber(currentPacket));
+							if(verbose) System.out.println("\nServer tiemd out. DATA " + TFTP.getBlockNumber(currentPacket) + " resent.");
 							sendReceiveSocket.send(currentPacket);
 							//TFTP.printPacket(currentPacket);
 						}
@@ -208,7 +228,7 @@ public class Client implements Exitable, Runnable {
 						sendReceiveSocket.send(errorPacket);
 
 						// Echo error message
-						System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
+						if (verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
 
 						unexpectedPacket = true;
 						continue;
@@ -241,7 +261,7 @@ public class Client implements Exitable, Runnable {
 						sendReceiveSocket.send(errorPacket);
 
 						// Echo error message
-						System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+						if (verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
 
 						return;
 					}
@@ -255,7 +275,7 @@ public class Client implements Exitable, Runnable {
 					nextPacket = dataPacketQueue.remove();
 				}
 				
-				if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received."); //addr = " + receivePacket.getAddress().toString() + ", port = " + receivePacket.getPort());
+				if (verbose) System.out.println("ACK " + TFTP.getBlockNumber(receivePacket) + " received."); //addr = " + receivePacket.getAddress().toString() + ", port = " + receivePacket.getPort());
 				// Newline
 				if (verbose) System.out.println();
 			} catch(Exception e) {
@@ -307,7 +327,7 @@ public class Client implements Exitable, Runnable {
 				dataPacket = TFTP.formPacket();
 
 				// Wait for DATA from server. If no response within set timeout limit, re-send packet (up to maximum re-send limit)
-				if (verbose) System.out.println("Waiting for DATA packet from server...");
+				if (verbose) System.out.println("Waiting for DATA from server...");
 
 				for(int i = 0; i<RESEND_LIMIT; i = i+1) {
 					try {
@@ -324,7 +344,7 @@ public class Client implements Exitable, Runnable {
 						//don't re-send ACK packets, but do re-send request
 						if(firstIteration)
 						{
-							if(verbose) System.out.println("\nTIMED OUT, RESENDING READ REQUEST.\n");
+							if(verbose) System.out.println("\nServer timed out. RRQ resent.\n");
 							sendReceiveSocket.send(requestPacket);
 						}
 					}
@@ -352,7 +372,7 @@ public class Client implements Exitable, Runnable {
 						sendReceiveSocket.send(errorPacket);
 
 						// Echo error message
-						System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
+						if (verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
 						continue;
 					}
 				}
@@ -363,7 +383,7 @@ public class Client implements Exitable, Runnable {
 					// If an ERROR packet is received instead of the expected DATA packet, delete the file
 					// and abort the transfer
 					if (TFTP.verifyErrorPacket(dataPacket, errorMessage)) {
-						System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(dataPacket) + ": " + TFTP.getErrorMessage(dataPacket) + ". Aborting transfer...\n");
+						if (verbose) System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(dataPacket) + ": " + TFTP.getErrorMessage(dataPacket) + ". Aborting transfer...\n");
 						return;
 					}
 					// If the received packet is not a DATA or an ERROR packet, then send an illegal TFTP
@@ -381,13 +401,13 @@ public class Client implements Exitable, Runnable {
 						sendReceiveSocket.send(errorPacket);
 
 						// Echo error message
-						System.out.println("Send ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+						if (verbose) System.out.println("Send ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
 
 						return;
 					}
 				}
 
-				if (verbose) System.out.println("DATA" + TFTP.getBlockNumber(dataPacket) + " received.");
+				if (verbose) System.out.println("DATA " + TFTP.getBlockNumber(dataPacket) + " received.");
 				//if (verbose) System.out.println("The size of the data was " + TFTP.getData(dataPacket).length + ".");
 
 				// Transfer is complete if data block is less than MAX_PACKET_SIZE
@@ -442,7 +462,7 @@ public class Client implements Exitable, Runnable {
 			//} while (TFTP.getData(dataPacket).length == TFTP.MAX_DATA_SIZE);
 			if (verbose) System.out.println("Writing bytes to file...");
 			TFTP.writeBytesToFile(filePath, fileBytes);
-			if (verbose) System.out.println("Read complete.\n");
+			System.out.println("Read complete.\n");
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -462,28 +482,10 @@ public class Client implements Exitable, Runnable {
 		String fileName;
 		String filePath;
 		boolean badDirectory;
-		String mode = "";
-		String targetHost;
 		
-		if(args.length >= 1) mode = args[0];
-		// Check mode for command line args
-		switch(mode) {
-		case "-t": 
-			sendPort = ERRSIM_PORT; 
-			targetHost = "error simulator";
-			System.out.println("The client is being routed through the error simulator."); 
-			break;
-		
-		default: 
-			sendPort = SERVER_PORT; 
-			targetHost = "server";
-			break;
-		}
-		//System.out.println("The port being used is " + sendPort);
-
 		// Get the IP address or host name from user input
 		for (boolean validHost = false; validHost == false; ) {
-			System.out.println("Please enter the IP address of the " + targetHost + ":");
+			System.out.println("Please enter the IP address of the server:");
 			String host = in.next();
 			try {
 				sendAddr = InetAddress.getByName(host);
@@ -498,7 +500,6 @@ public class Client implements Exitable, Runnable {
 		do {
 			badDirectory = false;
 			System.out.println("Please enter the directory that you want to use for the client files:");
-			System.out.println("Must end with either a '/' or a '\\' to work");
 			directory = in.next();
 			char lastChar = directory.charAt(directory.length()-1);
 			if (!TFTP.isDirectory(directory)) {
@@ -507,7 +508,7 @@ public class Client implements Exitable, Runnable {
 			}
 			else if (lastChar != '/' && lastChar != '\\')
 			{
-				System.out.println("Directory must end with either a '/' or a '\\'");
+				System.out.println("Valid directory must end with either a '/' or a '\\'");
 				badDirectory = true;
 			}
 		} while (badDirectory);
@@ -570,13 +571,15 @@ public class Client implements Exitable, Runnable {
 					System.out.println("File already exists.\n");
 					continue;
 				} else {
-					// Prints empty line
-					System.out.println("");
+					// Newline
+					System.out.println();
 				}
 			}
 			
-			System.out.println("Clearing socket receive buffer...");
+			// Make sure packet buffer is clear before processing transfer
+			if (verbose) System.out.println("Clearing socket receive buffer...");
 			DatagramPacket throwAwayPacket = TFTP.formPacket();
+			// Receive packets until a timeout occurs
 			do {
 				try {
 					sendReceiveSocket.receive(throwAwayPacket);
@@ -586,14 +589,17 @@ public class Client implements Exitable, Runnable {
 					e.printStackTrace();
 				}
 			} while (true);
+			if (verbose) System.out.println("Socket cleared.\n");
 
 			// Send the request
 			try {
 				switch (t) {
 					case READ:
+						System.out.println("Reading " + filePath + " from server...");
 						this.read(sendAddr, filePath, "netascii");
 						break;
 					case WRITE:
+						System.out.println("Writing " + filePath + " to server...");
 						this.write(sendAddr, filePath, "netascii");
 						break;
 					default:
