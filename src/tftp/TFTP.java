@@ -558,6 +558,13 @@ public class TFTP {
 
 		try
 		{
+			// Check if the data packet is a valid size
+			if (dataLength > MAX_PACKET_SIZE)
+			{
+				errorMessage[0] = "Packet too large";
+				return false;
+			}
+
 			// Check if first byte is 0
 			if (data[offset.getOffset()] != 0)
 			{
