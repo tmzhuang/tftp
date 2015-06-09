@@ -12,22 +12,42 @@ import java.util.*;
  */
 public class Server implements Exitable, Runnable {
 	private static int RECEIVE_PORT = 69;
-	//private static int RECEIVE_PORT = 32002;
 	private boolean verbose = true;
 	private boolean running = true;
 	private String directory;
 	private static int TIMEOUT = 2000; 	//Maximum time to wait for response before timeout and re-send packet: 2 seconds (2000ms)
 	private static int RESEND_LIMIT = 3; //Maximum number of times to try re-send packet without response: 3
+	private String[] args;
 
 	/**
 	 * Constructor of the Server class
+	 * 
+	 * @param args Command line arguments passed in from main
 	 */
-	public Server() {
-		// No initialization needed
+	public Server(String[] args) {
+		// Default states
+		verbose = false;
+
+		// Change states based on args
+		this.args = args;
+		if (this.args.length >= 1) {
+			for (String arg: args) {
+				switch(arg) {
+				case "-v":
+					verbose = true;
+					System.out.println("Verbose mode is on.");
+					break;
+				default:
+					System.out.println("Invalid command line arugment received. Exiting server...");
+					System.exit(1);
+				}
+			}
+		}
 	}
 
 	/**
-	 * An exit method for client, start repl for quitting client
+	 * While server is in running state, listen on well known port for Client requests. If one is received,
+	 * start a new ClientHandler thread with the request passed on, and go back to listening for requests.
 	 */
 	public void run() {
 		Scanner in = new Scanner(System.in);
@@ -37,7 +57,6 @@ public class Server implements Exitable, Runnable {
 		do {
 			badDirectory = false;
 			System.out.println("Please enter the directory that you want to use for the server files:");
-			System.out.println("Must end with either a '/' or a '\\' to work");
 			directory = in.next();
 			char lastChar = directory.charAt(directory.length()-1);
 			if (!TFTP.isDirectory(directory)) {
@@ -46,11 +65,11 @@ public class Server implements Exitable, Runnable {
 			}
 			else if (lastChar != '/' && lastChar != '\\')
 			{
-				System.out.println("Directory must end with either a '/' or a '\\'");
+				System.out.println("Valid directory must end with either a '/' or a '\\'");
 				badDirectory = true;
 			}
 		} while (badDirectory);
-		System.out.println("The directory you entered is: " + directory + "\n");
+		if (verbose) System.out.println("The directory you entered is: " + directory + "\n");
 
 		(new Thread(new Repl(this, in))).start();
 		(new Thread(new Listener())).start();
@@ -61,7 +80,7 @@ public class Server implements Exitable, Runnable {
 	 * from client side and responds with corresponding packet.
 	 * 
 	 * @author Team 4
-	 * @version Iteration 1
+	 * @version Iteration 5
 	 */
 	private class ClientHandler implements Runnable {
 		private InetAddress replyAddr;
@@ -74,7 +93,7 @@ public class Server implements Exitable, Runnable {
 		 * fields given the received packet and open up a new socket for
 		 * the transfer process.
 		 * 
-		 * @param packet Packet received from the client
+		 * @param packet Request packet received from a Client
 		 */
 		public ClientHandler(DatagramPacket packet) {
 			this.replyAddr = packet.getAddress();
@@ -96,6 +115,7 @@ public class Server implements Exitable, Runnable {
 		 */
 		public void run() {
 			String[] errorMessage = new String[1];
+			// Check that packet is a valid RRQ/WRQ 
 			if (!TFTP.verifyRequestPacket(initialPacket, errorMessage))
 			{
 				DatagramPacket errorPacket = TFTP.formERRORPacket(
@@ -111,14 +131,14 @@ public class Server implements Exitable, Runnable {
 				}
 				
 				if (verbose) {
-					System.out.println("Sent ERROR packet with ERROR code " + TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION + ": Request packet malformed. Aborting transfer...\n");
+					if (verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION + ": Request packet malformed. Aborting transfer...\n");
 				}
 				
 				socket.close();
 				return;
 			}
 			Request r = TFTP.parseRQ(initialPacket);
-			System.out.println(r.getType() + " request for file \"" + directory + r.getFileName() + "\".\n");
+			if (verbose) System.out.println(r.getType() + " request for file \"" + directory + r.getFileName() + "\".\n");
 
 			switch (r.getType()) {
 				case READ:
@@ -227,12 +247,10 @@ public class Server implements Exitable, Runnable {
 					// Flag set to true if an unexpected packet is received
 					boolean unexpectedPacket;
 					
-					
 					DatagramPacket receivePacket;
-					if (verbose) System.out.println("Waiting for ACK" + currentBlockNumber + "...");
+					if (verbose) System.out.println("Waiting for ACK from client...");
 
 						// Continue to receive packets until a packet from the correct client is received
-						//http://www.coderanch.com/t/206099/sockets/java/DatagramPacket-getLength-refresh
 						do {
 							unexpectedPacket = false;
 							receivePacket = TFTP.formPacket();
@@ -241,7 +259,7 @@ public class Server implements Exitable, Runnable {
 							for(int i = 0; i<RESEND_LIMIT+1; i++) {
 								try {
 										socket.receive(receivePacket);
-										i = RESEND_LIMIT+1;		//If packet successfully received, leave loop
+										break;		//If packet successfully received, leave loop
 								} catch(SocketTimeoutException e) {
 									//if re-send attempt limit reached, 'give up' and cancel transfer
 									if(i == RESEND_LIMIT) {
@@ -250,8 +268,8 @@ public class Server implements Exitable, Runnable {
 										return;
 									}
 									//otherwise re-send
-										System.out.println("\nTIMED OUT, RESENDING DATA" + TFTP.getBlockNumber(currentPacket));
 										socket.send(currentPacket);
+										if (verbose) System.out.println("\nClient timed out. DATA " + TFTP.getBlockNumber(currentPacket) + " resent.\n");
 								}
 							}
 							
@@ -273,7 +291,7 @@ public class Server implements Exitable, Runnable {
 								socket.send(errorPacket);
 
 								// Echo error message
-								System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
+								if (verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
 
 								unexpectedPacket = true;
 								continue;
@@ -285,7 +303,7 @@ public class Server implements Exitable, Runnable {
 								// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
 								String[] errorMessage2 = new String[1];
 								if (TFTP.verifyErrorPacket(receivePacket, errorMessage2)) {
-									System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
+									if (verbose) System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 
 									// Closes socket and aborts thread
 									socket.close();
@@ -305,7 +323,7 @@ public class Server implements Exitable, Runnable {
 									socket.send(errorPacket);
 
 									// Echo error message
-									System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+									if (verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
 
 									// Closes socket and aborts thread
 									socket.close();
@@ -316,14 +334,14 @@ public class Server implements Exitable, Runnable {
 							// Ignore acknowledgement packet if duplicate
 							if (TFTP.getBlockNumber(receivePacket) < currentBlockNumber)
 							{
-								System.out.println("Ignoring previous duplicate ACK" + TFTP.getBlockNumber(receivePacket) + " packet received...\n");
+								if (verbose) System.out.println("Ignoring previous duplicate ACK " + TFTP.getBlockNumber(receivePacket) + " packet received...\n");
 								unexpectedPacket = true;
 								continue;
 							}
 						} while (unexpectedPacket);
 
 
-					if (verbose) System.out.println("ACK" + TFTP.getBlockNumber(receivePacket) + " received.");
+					if (verbose) System.out.println("ACK " + TFTP.getBlockNumber(receivePacket) + " received.");
 					// Newline
 					if (verbose) System.out.println();
 					transferComplete = dataPacketQueue.isEmpty();
@@ -381,7 +399,7 @@ public class Server implements Exitable, Runnable {
 
 				// Form and send ACK0
 				DatagramPacket ackPacket = TFTP.formACKPacket(replyAddr, TID, 0);
-				if (verbose) System.out.println("Sending ACK0.");
+				if (verbose) System.out.println("Sending ACK 0.");
 				socket.send(ackPacket);
 
 				// Flag set when transfer is finished
@@ -389,13 +407,13 @@ public class Server implements Exitable, Runnable {
 
 				do {
 					// Wait for a DATA packet
-					if (verbose) System.out.println("Waiting for DATA" + currentBlockNumber + "...");
+					if (verbose) System.out.println("Waiting for DATA from client...");
 					receivePacket = TFTP.formPacket();
 					
 					for(int i = 0; i<RESEND_LIMIT+1; i++) {
 						try {
 								socket.receive(receivePacket);
-								i = RESEND_LIMIT+1;		//If packet successfully received, leave loop
+								break;		//If packet successfully received, leave loop
 						} catch(SocketTimeoutException e) {
 							//if re-send attempt limit reached, 'give up' and cancel transfer
 							if(i == RESEND_LIMIT) {
@@ -403,9 +421,6 @@ public class Server implements Exitable, Runnable {
 								socket.close();
 								return;
 							}
-							//otherwise re-send
-						//		System.out.println("Timed out, resending ACK" + + TFTP.getBlockNumber(ackPacket));
-						//		socket.send(ackPacket);
 						}
 					}
 					
@@ -426,7 +441,7 @@ public class Server implements Exitable, Runnable {
 						socket.send(errorPacket);
 
 						// Echo error message
-						System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
+						if (verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
 						continue;
 					}
 
@@ -437,7 +452,7 @@ public class Server implements Exitable, Runnable {
 						// and abort the transfer
 						String[] errorMessage2 = new String[1];
 						if (TFTP.verifyErrorPacket(receivePacket, errorMessage2)) {
-							System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
+							if (verbose) System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 							return;
 						}
 						// If the received packet is not a DATA or an ERROR packet, then send an illegal TFTP
@@ -454,7 +469,7 @@ public class Server implements Exitable, Runnable {
 							socket.send(errorPacket);
 
 							// Echo error message
-							System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+							if (verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
 							return;
 						}
 					}
@@ -465,7 +480,7 @@ public class Server implements Exitable, Runnable {
 					}
 
 					// Echo successful data receive
-					if (verbose) System.out.println("DATA" + TFTP.getBlockNumber(receivePacket) + " received.");
+					if (verbose) System.out.println("DATA " + TFTP.getBlockNumber(receivePacket) + " received.");
 					// Newline
 					if (verbose) System.out.println();
 					
@@ -501,7 +516,7 @@ public class Server implements Exitable, Runnable {
 					
 					// Form a ACK packet to respond with
 					ackPacket = TFTP.formACKPacket(replyAddr, TID, TFTP.getBlockNumber(receivePacket));
-					if (verbose) System.out.println("Sending ACK" + TFTP.getBlockNumber(ackPacket) + ".");
+					if (verbose) System.out.println("Sending ACK " + TFTP.getBlockNumber(ackPacket) + ".");
 					socket.send(ackPacket);
 					
 					//Incrament next block number expected only if the last packet received was the correct sequentially expected one 
@@ -535,7 +550,7 @@ public class Server implements Exitable, Runnable {
 		 * client connection.
 		 */
 		public Listener() {
-			System.out.println("Creating new listener.");
+			if (verbose) System.out.println("Creating new listener.");
 			try {
 				receiveSocket = new DatagramSocket(RECEIVE_PORT);
 				receiveSocket.setSoTimeout(5000);
@@ -561,7 +576,7 @@ public class Server implements Exitable, Runnable {
 					//if (verbose) System.out.println("Waiting for request from client...");
 					receiveSocket.receive(packet);
 					TFTP.shrinkData(packet);
-					if (verbose) System.out.println("Packet received.");
+					if (verbose) System.out.println("A request was received.");
 				} catch(Exception e) {
 					if (e instanceof InterruptedIOException) {
 						//System.out.println("Socket timeout.");
@@ -594,7 +609,7 @@ public class Server implements Exitable, Runnable {
 	 */
 	public static void main (String[] args) {
 		// Listen on TFPT known port (69)
-		Server server = new Server();
+		Server server = new Server(args);
 		server.run();
 	}
 }

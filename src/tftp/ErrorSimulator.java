@@ -701,9 +701,6 @@ public class ErrorSimulator implements Runnable
 						// Creates a DatagramPacket to receive data packet from server
 						DatagramPacket receivedPacket = TFTP.formPacket();
 
-						// Receives data packet from server
-						//sendReceiveServerSocket.receive(receivedPacket);
-						// Receives packet from client or server
 						System.out.println("Waiting for packet...");
 						
 						packetReceived = false;
@@ -718,8 +715,8 @@ public class ErrorSimulator implements Runnable
 							catch(SocketTimeoutException e) {
 								try{
 									sendReceiveServerSocket.receive(receivedPacket);
-									packetReceived = true;
 									fromServer = true;
+									packetReceived = true;
 								}
 								catch(SocketTimeoutException ex)	{}
 								}
@@ -739,7 +736,7 @@ public class ErrorSimulator implements Runnable
 						// Transfer is complete if data block is less than MAX_DATA_SIZE
 						if (receivedPacket.getLength() < TFTP.MAX_DATA_SIZE)
 						{
-							transferComplete = true;
+						//	transferComplete = true;
 						}
 						TFTP.shrinkData(receivedPacket);
 						System.out.println("[SERVER=>ERRSIM]");
@@ -802,13 +799,8 @@ public class ErrorSimulator implements Runnable
 						}
 						System.out.println("Expecting ACK from client.");
 					}
-					//if received packet is ACK or ERROR
+					//if received packet is ACK or ERROR from Client
 					else {
-						// Creates a DatagramPacket to receive acknowledgment packet from client
-						//DatagramPacket ackPacket = TFTP.formPacket();
-
-						// Receives acknowledgment packet from client
-						//sendReceiveClientSocket.receive(ackPacket);
 						
 						TFTP.shrinkData(receivedPacket);
 						System.out.println("[CLIENT=>ERRSIM]");
@@ -879,8 +871,8 @@ public class ErrorSimulator implements Runnable
 							} catch(InterruptedException e) {
 							}
 						}
+						System.out.println("Expecting DATA packet from server.");
 					}
-					System.out.println("Expecting DATA packet from server.");
 					}
 					//System.out.println("Connection terminated.\n");
 				}
@@ -1225,8 +1217,8 @@ public class ErrorSimulator implements Runnable
 							} catch(InterruptedException e) {
 							}
 						}
+						System.out.println("Expecting DATA from client.");
 					}
-					System.out.println("Expecting DATA from client.");
 					}
 
 					System.out.println("Connection terminated.\n");

@@ -94,7 +94,7 @@ public class TFTPTest {
 			int port = 69;
 			String filename = "formDATAPacketsTest1.txt";
 
-			Queue<DatagramPacket> dataPackets = TFTP.formDATAPackets(addr, port, filename);
+			TFTP.formDATAPackets(addr, port, filename);
 		} catch(Exception e) {
 			throw e;
 		}
