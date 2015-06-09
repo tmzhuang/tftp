@@ -19,10 +19,10 @@ public class ErrorSimulatorFixedDelay
 	/**
 	 * Fields
 	 */
-	private static int RECEIVE_PORT = 68;
-	private static int SEND_PORT = 69;
-	//private static int RECEIVE_PORT = 32001;
-	//private static int SEND_PORT = 32002;
+	//private static int RECEIVE_PORT = 68;
+	//private static int SEND_PORT = 69;
+	private static int RECEIVE_PORT = 32001;
+	private static int SEND_PORT = 32002;
 	private static final int RETRANSMITTION_TIMEOUT = 2000;
 	private static final int ADDED_DELAY = 10;
 	private static final int MAX_TIMEOUT_COUNT = 3;
@@ -671,6 +671,7 @@ public class ErrorSimulatorFixedDelay
 					{
 						// Do nothing
 					}
+					System.out.println("Sending duplicate packet");
 					System.out.println("[ ErrorSim -> Server ]");
 					TFTP.printPacket(serverRequestPacket);
 					sendReceiveServerSocket.send(serverRequestPacket);
@@ -681,6 +682,7 @@ public class ErrorSimulatorFixedDelay
 				}
 				else if (simulateError.get("simulateLostPacket"))
 				{
+					System.out.println("Losing previous packet");
 					errorSimulation = false;
 					simulateError.put("simulateLostPacket", false);
 				}
@@ -737,7 +739,6 @@ public class ErrorSimulatorFixedDelay
 						{
 							serverAddressTID = dataPacket.getAddress();
 							serverPortTID = dataPacket.getPort();
-							firstIteration = false;
 						}
 
 						// Sends data packet to client
@@ -759,58 +760,102 @@ public class ErrorSimulatorFixedDelay
 						}
 						else if (simulateError.get("simulateDelayedPacket"))
 						{
-							System.out.println("Expecting server to resend latest DATA packet...\n");
-							try
+							if (firstIteration)
 							{
-								Thread.sleep(RETRANSMITTION_TIMEOUT/2);
-							}
-							catch (InterruptedException e)
-							{
-								// Do nothing
-							}
-							
-							DatagramPacket retransmittedDataPacket = receivePacket(sendReceiveServerSocket);
-							if (retransmittedDataPacket == null)
-							{
+								System.out.println("Expecting client to resend RRQ packet...\n");
+								try
+								{
+									Thread.sleep(RETRANSMITTION_TIMEOUT + ADDED_DELAY);
+								}
+								catch (InterruptedException e)
+								{
+									// Do nothing
+								}
+								
+								DatagramSocket unknownTIDSocket = new DatagramSocket();
+
+								System.out.println("[ ErrorSim -> Client ]");
+								TFTP.printPacket(forwardedDataPacket);
+								unknownTIDSocket.send(forwardedDataPacket);
+
+								DatagramPacket unknownTIDErrorResponsePacket = receivePacket(unknownTIDSocket);
+								if (unknownTIDErrorResponsePacket == null)
+								{
+									return;
+								}
+								System.out.println("[ Client -> ErrorSim ]");
+								TFTP.shrinkData(unknownTIDErrorResponsePacket);
+								TFTP.printPacket(unknownTIDErrorResponsePacket);
+
+								DatagramPacket forwardedUnknownTIDErrorResponsePacket = TFTP.formPacket(
+										serverAddressTID,
+										serverPortTID,
+										unknownTIDErrorResponsePacket.getData());
+								System.out.println("[ ErrorSim -> Server ]");
+								TFTP.printPacket(forwardedUnknownTIDErrorResponsePacket);
+								sendReceiveServerSocket.send(forwardedUnknownTIDErrorResponsePacket);
+
+								unknownTIDSocket.close();
+
+								simulateError.put("simulateDelayedPacket", false);
+								errorSimulation = false;
 								return;
 							}
-							System.out.println("[ Server -> ErrorSim ]");
-							TFTP.shrinkData(retransmittedDataPacket);
-							TFTP.printPacket(retransmittedDataPacket);
-							
-							DatagramPacket forwardedRetransmittedDataPacket = TFTP.formPacket(
-									clientAddressTID,
-									clientPortTID,
-									retransmittedDataPacket.getData());
-							System.out.println("[ ErrorSim -> Client ]");
-							TFTP.shrinkData(forwardedRetransmittedDataPacket);
-							TFTP.printPacket(forwardedRetransmittedDataPacket);
-							sendReceiveClientSocket.send(forwardedRetransmittedDataPacket);;
-
-							DatagramPacket ackForFirstSentPacket = receivePacket(sendReceiveClientSocket);
-							if (ackForFirstSentPacket == null)
+							else
 							{
-								return;
+								System.out.println("Expecting server to resend latest DATA packet...\n");
+								try
+								{
+									Thread.sleep(RETRANSMITTION_TIMEOUT/2);
+								}
+								catch (InterruptedException e)
+								{
+									// Do nothing
+								}
+
+								DatagramPacket retransmittedDataPacket = receivePacket(sendReceiveServerSocket);
+								if (retransmittedDataPacket == null)
+								{
+									return;
+								}
+								System.out.println("[ Server -> ErrorSim ]");
+								TFTP.shrinkData(retransmittedDataPacket);
+								TFTP.printPacket(retransmittedDataPacket);
+
+								DatagramPacket forwardedRetransmittedDataPacket = TFTP.formPacket(
+										clientAddressTID,
+										clientPortTID,
+										retransmittedDataPacket.getData());
+								System.out.println("[ ErrorSim -> Client ]");
+								TFTP.shrinkData(forwardedRetransmittedDataPacket);
+								TFTP.printPacket(forwardedRetransmittedDataPacket);
+								sendReceiveClientSocket.send(forwardedRetransmittedDataPacket);;
+
+								DatagramPacket ackForFirstSentPacket = receivePacket(sendReceiveClientSocket);
+								if (ackForFirstSentPacket == null)
+								{
+									return;
+								}
+								System.out.println("[ Client -> ErrorSim ]");
+								TFTP.shrinkData(ackForFirstSentPacket);
+								TFTP.printPacket(ackForFirstSentPacket);
+
+								DatagramPacket forwardedAckForFirstSentPacket = TFTP.formPacket(
+										serverAddressTID,
+										serverPortTID,
+										ackForFirstSentPacket.getData());
+								System.out.println("[ ErrorSim -> Server ]");
+								TFTP.printPacket(forwardedAckForFirstSentPacket);
+								sendReceiveServerSocket.send(forwardedAckForFirstSentPacket);
+
+								System.out.println("Sending delayed packet");
+								System.out.println("[ ErrorSim -> Client ]");
+								TFTP.printPacket(forwardedDataPacket);
+								sendReceiveClientSocket.send(forwardedDataPacket);
+
+								errorSimulation = false;
+								simulateError.put("simulateDelayedPacket", false);
 							}
-							System.out.println("[ Client -> ErrorSim ]");
-							TFTP.shrinkData(ackForFirstSentPacket);
-							TFTP.printPacket(ackForFirstSentPacket);
-							
-							DatagramPacket forwardedAckForFirstSentPacket = TFTP.formPacket(
-									serverAddressTID,
-									serverPortTID,
-									ackForFirstSentPacket.getData());
-							System.out.println("[ ErrorSim -> Server ]");
-							TFTP.printPacket(forwardedAckForFirstSentPacket);
-							sendReceiveServerSocket.send(forwardedAckForFirstSentPacket);
-
-							System.out.println("Sending delayed packet");
-							System.out.println("[ ErrorSim -> Client ]");
-							TFTP.printPacket(forwardedDataPacket);
-							sendReceiveClientSocket.send(forwardedDataPacket);
-
-							errorSimulation = false;
-							simulateError.put("simulateDelayedPacket", false);
 						}
 						else if (simulateError.get("simulateDuplicatePacket"))
 						{
@@ -887,6 +932,8 @@ public class ErrorSimulatorFixedDelay
 							TFTP.printPacket(forwardedDataPacket);
 							sendReceiveClientSocket.send(forwardedDataPacket);
 						}
+
+						firstIteration = false;
 
 						if (continueDuplicatedRequestSimulation)
 						{
