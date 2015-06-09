@@ -11,8 +11,8 @@ import java.util.*;
  * @version Iteration 1
  */
 public class Server implements Exitable, Runnable {
-	private static int RECEIVE_PORT = 69;
-	//private static int RECEIVE_PORT = 32002;
+	//private static int RECEIVE_PORT = 69;
+	private static int RECEIVE_PORT = 32002;
 	private boolean verbose = true;
 	private boolean running = true;
 	private String directory;
@@ -111,7 +111,7 @@ public class Server implements Exitable, Runnable {
 				}
 				
 				if (verbose) {
-					System.out.println("ERROR CODE " + TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION + ": Request packet malformed. Aborting transfer...\n");
+					System.out.println("Sent ERROR packet with ERROR code " + TFTP.ERROR_CODE_ILLEGAL_TFTP_OPERATION + ": Request packet malformed. Aborting transfer...\n");
 				}
 				
 				socket.close();
@@ -157,7 +157,7 @@ public class Server implements Exitable, Runnable {
 				}
 
 				// Echo error message
-				if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_FILE_NOT_FOUND + ": File does not exist. Aborting transfer...\n");
+				if (verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.ERROR_CODE_FILE_NOT_FOUND + ": File does not exist. Aborting transfer...\n");
 
 				// Closes socket and aborts thread
 				socket.close();
@@ -182,7 +182,7 @@ public class Server implements Exitable, Runnable {
 				}
 
 				// Echo error message
-				if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_ACCESS_VIOLATION + ": File access violation. Aborting transfer...\n");
+				if (verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.ERROR_CODE_ACCESS_VIOLATION + ": File access violation. Aborting transfer...\n");
 
 				// Closes socket and aborts thread
 				socket.close();
@@ -273,7 +273,7 @@ public class Server implements Exitable, Runnable {
 								socket.send(errorPacket);
 
 								// Echo error message
-								System.out.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
+								System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
 
 								unexpectedPacket = true;
 								continue;
@@ -284,7 +284,7 @@ public class Server implements Exitable, Runnable {
 							if (!TFTP.verifyAckPacket(receivePacket, currentBlockNumber, errorMessage)) {
 								// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
 								if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
-									System.out.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
+									System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 
 									// Closes socket and aborts thread
 									socket.close();
@@ -304,7 +304,7 @@ public class Server implements Exitable, Runnable {
 									socket.send(errorPacket);
 
 									// Echo error message
-									System.out.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+									System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
 
 									// Closes socket and aborts thread
 									socket.close();
@@ -371,7 +371,7 @@ public class Server implements Exitable, Runnable {
 					socket.send(errorPacket);
 
 					// Echo error message
-					if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_ACCESS_VIOLATION + ": File access violation. Aborting transfer...\n");
+					if (verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.ERROR_CODE_ACCESS_VIOLATION + ": File access violation. Aborting transfer...\n");
 					
 					// Closes socket and aborts thread
 					socket.close();
@@ -425,7 +425,7 @@ public class Server implements Exitable, Runnable {
 						socket.send(errorPacket);
 
 						// Echo error message
-						System.out.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
+						System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Received packet from an unknown host. Discarding packet and continuing transfer...\n");
 						continue;
 					}
 
@@ -435,7 +435,7 @@ public class Server implements Exitable, Runnable {
 						// If an ERROR packet is received instead of the expected DATA packet, delete the file
 						// and abort the transfer
 						if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
-							System.out.println("ERROR CODE " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
+							System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 							return;
 						}
 						// If the received packet is not a DATA or an ERROR packet, then send an illegal TFTP
@@ -452,7 +452,7 @@ public class Server implements Exitable, Runnable {
 							socket.send(errorPacket);
 
 							// Echo error message
-							System.out.println("ERROR CODE " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
+							System.out.println("Sent ERROR packet with ERROR code " + TFTP.getErrorCode(errorPacket) + ": Illegal TFTP Operation. Aborting transfer...\n");
 							return;
 						}
 					}
@@ -489,7 +489,7 @@ public class Server implements Exitable, Runnable {
 							}
 
 							// Echo error message
-							if (verbose) System.out.println("ERROR code " + TFTP.ERROR_CODE_DISK_FULL + ": Disk full. Aborting transfer...\n");
+							if (verbose) System.out.println("Sent ERROR packet with ERROR code " + TFTP.ERROR_CODE_DISK_FULL + ": Disk full. Aborting transfer...\n");
 
 							// Closes socket and aborts thread
 							socket.close();
