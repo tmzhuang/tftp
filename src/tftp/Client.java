@@ -512,7 +512,7 @@ public class Client implements Exitable, Runnable {
 				badDirectory = true;
 			}
 		} while (badDirectory);
-		System.out.println("The directory you entered is: " + directory + "\n");
+		if (verbose) System.out.println("The directory you entered is: " + directory + "\n");
 
 		while (true) {
 			boolean validCmd = false;
