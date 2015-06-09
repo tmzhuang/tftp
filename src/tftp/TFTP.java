@@ -1193,6 +1193,11 @@ public class TFTP {
 			{
 				case READ_OP_CODE:
 				case WRITE_OP_CODE:
+					Request request = parseRQ(packet);
+					if (request == null) {
+						System.out.println("Could not print malformed packet.");
+						return;
+					}
 					try { System.out.println("File name = " + parseRQ(packet).getFileName()); }
 					catch (ArrayIndexOutOfBoundsException e) { System.out.println("File name = Unknown"); }
 					try { System.out.println("Mode = " + parseRQ(packet).getMode()); }
