@@ -300,8 +300,8 @@ public class Server implements Exitable, Runnable {
 							// This block is entered if the packet received is not a valid ACK packet
 							String[] errorMessage = new String[1];
 							if (!TFTP.verifyAckPacket(receivePacket, currentBlockNumber, errorMessage)) {
-								// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
 								String[] errorMessage2 = new String[1];
+								// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
 								if (TFTP.verifyErrorPacket(receivePacket, errorMessage2)) {
 									if (verbose) System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 

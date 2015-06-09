@@ -116,8 +116,9 @@ public class Client implements Exitable, Runnable {
 				// This block is entered if the packet received is not a valid ACK packet
 				String[] errorMessage = new String[1];
 				if (!TFTP.verifyAckPacket(receivePacket, 0, errorMessage)) {
+					String[] errorMessage2 = new String[1];
 					// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
-					if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
+					if (TFTP.verifyErrorPacket(receivePacket, errorMessage2)) {
 						if(verbose) System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 						return;
 					}
@@ -239,8 +240,9 @@ public class Client implements Exitable, Runnable {
 				String[] errorMessage = new String[1];
 				if (!TFTP.verifyAckPacket(receivePacket, currentBlockNumber, errorMessage))
 				{
+					String[] errorMessage2 = new String[1];
 					// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
-					if (TFTP.verifyErrorPacket(receivePacket, errorMessage))
+					if (TFTP.verifyErrorPacket(receivePacket, errorMessage2))
 					{
 						System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 						return;
@@ -380,9 +382,10 @@ public class Client implements Exitable, Runnable {
 				// This block is entered if the packet received is not a valid DATA packet
 				String[] errorMessage = new String[1];
 				if (!TFTP.verifyDataPacket(dataPacket, currentBlockNumber, errorMessage)) {
+					String[] errorMessage2 = new String[1];
 					// If an ERROR packet is received instead of the expected DATA packet, delete the file
 					// and abort the transfer
-					if (TFTP.verifyErrorPacket(dataPacket, errorMessage)) {
+					if (TFTP.verifyErrorPacket(dataPacket, errorMessage2)) {
 						if (verbose) System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(dataPacket) + ": " + TFTP.getErrorMessage(dataPacket) + ". Aborting transfer...\n");
 						return;
 					}
