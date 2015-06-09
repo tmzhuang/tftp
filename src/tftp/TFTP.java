@@ -44,7 +44,7 @@ public class TFTP {
 	public static final int MAX_BLOCK_NUMBER = 65535;
 	public static final String MODE_NETASCII = "netascii";
 	public static final String MODE_OCTET = "octet";
-	public static int VERBOSITY = 1;
+	public static int VERBOSITY = 3;
 
 	/**
 	 * Forms a DatagramPacket with an empty data buffer large enough to hold the maximum

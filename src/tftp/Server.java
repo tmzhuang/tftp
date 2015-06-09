@@ -301,7 +301,8 @@ public class Server implements Exitable, Runnable {
 							String[] errorMessage = new String[1];
 							if (!TFTP.verifyAckPacket(receivePacket, currentBlockNumber, errorMessage)) {
 								// If an ERROR packet is received instead of the expected ACK packet, abort the transfer
-								if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
+								String[] errorMessage2 = new String[1];
+								if (TFTP.verifyErrorPacket(receivePacket, errorMessage2)) {
 									if (verbose) System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 
 									// Closes socket and aborts thread
@@ -449,7 +450,8 @@ public class Server implements Exitable, Runnable {
 					if (!TFTP.verifyDataPacket(receivePacket, currentBlockNumber, errorMessage)) {
 						// If an ERROR packet is received instead of the expected DATA packet, delete the file
 						// and abort the transfer
-						if (TFTP.verifyErrorPacket(receivePacket, errorMessage)) {
+						String[] errorMessage2 = new String[1];
+						if (TFTP.verifyErrorPacket(receivePacket, errorMessage2)) {
 							if (verbose) System.out.println("Received ERROR packet with ERROR code " + TFTP.getErrorCode(receivePacket) + ": " + TFTP.getErrorMessage(receivePacket) + ". Aborting transfer...\n");
 							return;
 						}
